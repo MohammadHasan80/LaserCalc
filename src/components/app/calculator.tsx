@@ -145,6 +145,8 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
               <Input
                 id="custPhone"
                 dir="ltr"
+                type="tel"
+                inputMode="numeric"
                 className="text-right"
                 placeholder="0912..."
                 value={input.customerPhone}
