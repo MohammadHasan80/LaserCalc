@@ -69,7 +69,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
       type="number"
       inputMode="decimal"
       dir="ltr"
-      className="no-spinner text-left"
+      className="no-spinner text-right"
       placeholder={placeholder}
       step={step}
       min={min}
@@ -145,7 +145,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
               <Input
                 id="custPhone"
                 dir="ltr"
-                className="text-left"
+                className="text-right"
                 placeholder="0912..."
                 value={input.customerPhone}
                 onChange={(e) =>
@@ -343,7 +343,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
                         type="number"
                         inputMode="decimal"
                         dir="ltr"
-                        className="no-spinner text-left"
+                        className="no-spinner text-right"
                         placeholder="طول"
                         value={d.lengthCm === "" ? "" : String(d.lengthCm)}
                         onChange={(e) =>
@@ -354,7 +354,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
                         type="number"
                         inputMode="decimal"
                         dir="ltr"
-                        className="no-spinner text-left"
+                        className="no-spinner text-right"
                         placeholder="عرض"
                         value={d.widthCm === "" ? "" : String(d.widthCm)}
                         onChange={(e) =>

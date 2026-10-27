@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { DirectionProvider } from "@radix-ui/react-direction";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
@@ -94,6 +95,7 @@ export default function Home() {
   };
 
   return (
+    <DirectionProvider dir="rtl">
     <div className="flex min-h-screen flex-col bg-stone-100 dark:bg-stone-950">
       {/* هدر */}
       <header className="no-print sticky top-0 z-40 border-b bg-stone-900 text-white shadow-md">
@@ -196,5 +198,6 @@ export default function Home() {
         </p>
       </footer>
     </div>
+    </DirectionProvider>
   );
 }

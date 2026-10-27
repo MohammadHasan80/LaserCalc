@@ -217,7 +217,7 @@ export function InvoiceView({
             <Input
               id="invNo"
               dir="ltr"
-              className="no-spinner h-9 w-24 text-left"
+              className="no-spinner h-9 w-24 text-right"
               value={invoiceNumber}
               onChange={(e) =>
                 onInvoiceNumberChange(
@@ -234,7 +234,7 @@ export function InvoiceView({
               id="vatPct"
               dir="ltr"
               inputMode="decimal"
-              className="no-spinner h-9 w-16 text-left"
+              className="no-spinner h-9 w-16 text-right"
               value={vatPct > 0 ? String(vatPct) : ""}
               placeholder="0"
               onChange={(e) => numPatch("vatPercent")(e.target.value)}
@@ -248,7 +248,7 @@ export function InvoiceView({
               id="discount"
               dir="ltr"
               inputMode="decimal"
-              className="no-spinner h-9 w-28 text-left"
+              className="no-spinner h-9 w-28 text-right"
               value={discount > 0 ? String(discount) : ""}
               placeholder="0"
               onChange={(e) => numPatch("discountAmount")(e.target.value)}
