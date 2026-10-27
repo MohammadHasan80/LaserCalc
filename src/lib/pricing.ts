@@ -85,6 +85,7 @@ export interface SheetDimRow {
 export interface CalcInput {
   customerName: string;
   customerPhone: string;
+  customerAddress: string; // آدرس مشتری (اختیاری — برای فاکتور)
   sheetType: SheetType | "";
   gasType: GasType | "";
   thickness: number | "";
@@ -96,6 +97,8 @@ export interface CalcInput {
   sheetFromCustomer: boolean; // ورق از مشتری
   sheetPriceManual: number | ""; // نرخ دستی ورق (فی کیلویی) — ریال به ازای هر کیلو
   dims: SheetDimRow[]; // ابعاد ورق‌ها (cm)
+  vatPercent: number; // درصد مالیات بر ارزش افزوده (۰ = بدون مالیات)
+  discountAmount: number; // تخفیف (ریال)
 }
 
 export interface InvoiceItem {
@@ -105,6 +108,8 @@ export interface InvoiceItem {
   unit: string;
   unitPrice: number | string;
   amount: number | string;
+  material?: string; // جنس ورق (برای ردیف‌های برش/ورق)
+  thickness?: string; // ضخامت (میلی‌متر)
 }
 
 export interface CalcResult {
@@ -130,6 +135,8 @@ export interface CalcResult {
   totalMeters: number | null; // کل متراژ برش
   items: InvoiceItem[]; // ردیف‌های فاکتور
   invoiceTotal: number;
+  vatAmount: number; // مالیات بر ارزش افزوده
+  grandTotal: number; // مبلغ قابل پرداخت (پس از تخفیف و مالیات)
 }
 
 const num = (v: number | ""): number | null =>
@@ -265,11 +272,13 @@ export function calculate(input: CalcInput): CalcResult {
   if (totalMeters && costPerPiece !== null && pieces !== null) {
     items.push({
       row: row++,
-      desc: `برش لیزر ${input.sheetType} — گاز ${input.gasType} — ضخامت ${thickness} میلی‌متر`,
+      desc: `برش لیزر — گاز ${input.gasType}`,
       qty: round2(totalMeters),
       unit: "متر",
       unitPrice: round2(costPerPiece / cutLen!),
       amount: Math.round(totalCutting!),
+      material: input.sheetType,
+      thickness: String(thickness),
     });
   }
   if (totalPrs !== null && totalPrs > 0 && pieces !== null && prsPer !== null) {
@@ -285,11 +294,13 @@ export function calculate(input: CalcInput): CalcResult {
   if (!input.sheetFromCustomer && sheetTotal !== null && sheetTotal > 0) {
     items.push({
       row: row++,
-      desc: `ورق ${input.sheetType} — ضخامت ${thickness} میلی‌متر`,
+      desc: `ورق ${input.sheetType}`,
       qty: round2(sheetWt ?? 0),
       unit: "کیلو",
       unitPrice: Math.round(sheetPerKg ?? 0),
       amount: Math.round(sheetTotal),
+      material: input.sheetType,
+      thickness: String(thickness),
     });
   }
   if (input.designCost > 0) {
@@ -302,6 +313,17 @@ export function calculate(input: CalcInput): CalcResult {
       amount: Math.round(input.designCost),
     });
   }
+
+  // ── مالیات، تخفیف و مبلغ قابل پرداخت ──
+  const baseSum = items.reduce(
+    (s, it) => s + (typeof it.amount === "number" ? it.amount : 0),
+    0
+  );
+  const pct = Number(input.vatPercent) || 0;
+  const disc = Number(input.discountAmount) || 0;
+  const net = Math.max(0, baseSum - disc);
+  const vatAmount = pct > 0 ? Math.round((net * pct) / 100) : 0;
+  const grandTotal = net + vatAmount;
 
   return {
     cuttingRate,
@@ -325,10 +347,9 @@ export function calculate(input: CalcInput): CalcResult {
     perMeterError,
     totalMeters,
     items,
-    invoiceTotal: items.reduce(
-      (s, it) => s + (typeof it.amount === "number" ? it.amount : 0),
-      0
-    ),
+    invoiceTotal: baseSum,
+    vatAmount,
+    grandTotal: totalPriceError ? 0 : grandTotal,
   };
 }
 
@@ -339,6 +360,7 @@ function round2(n: number): number {
 export const EMPTY_INPUT: CalcInput = {
   customerName: "",
   customerPhone: "",
+  customerAddress: "",
   sheetType: "",
   gasType: "",
   thickness: "",
@@ -349,5 +371,7 @@ export const EMPTY_INPUT: CalcInput = {
   designCost: 0,
   sheetFromCustomer: true,
   sheetPriceManual: "",
+  vatPercent: 10,
+  discountAmount: 0,
   dims: [{ id: "d1", lengthCm: "", widthCm: "" }],
 };

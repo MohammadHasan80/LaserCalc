@@ -156,6 +156,15 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
                 }
               />
             </div>
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="custAddr">آدرس (اختیاری — در فاکتور نمایش داده می‌شود)</Label>
+              <Input
+                id="custAddr"
+                placeholder="مثلاً کاشان، شهرک صنعتی"
+                value={input.customerAddress}
+                onChange={(e) => set("customerAddress", e.target.value)}
+              />
+            </div>
           </CardContent>
         </Card>
 
@@ -497,6 +506,13 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
                     </>
                   )}
                 </p>
+                {!result.totalPriceError &&
+                  (Number(input.vatPercent) || 0) > 0 && (
+                    <p className="mt-1.5 text-[11px] text-stone-400">
+                      بدون ارزش افزوده — قابل پرداخت در فاکتور: {" "}
+                      {faMoney(result.grandTotal)} ریال
+                    </p>
+                  )}
               </div>
 
               <div className="grid grid-cols-2 gap-3">

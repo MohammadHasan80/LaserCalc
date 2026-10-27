@@ -10,11 +10,23 @@ import {
   Save,
   CheckCircle2,
   ArrowRight,
-  FileText,
   Download,
   Loader2,
+  Crosshair,
+  Timer,
+  Gem,
+  Cog,
+  FileText,
+  CalendarDays,
+  Hourglass,
+  UserRound,
+  ClipboardList,
+  MapPin,
+  Phone,
+  Instagram,
 } from "lucide-react";
 import { calculate, type CalcInput } from "@/lib/pricing";
+import { BUSINESS, INVOICE_TERMS } from "@/lib/business";
 import {
   faMoney,
   faNum,
@@ -27,13 +39,16 @@ interface Props {
   input: CalcInput;
   invoiceNumber: string;
   onInvoiceNumberChange: (v: string) => void;
+  onPatch: (patch: Partial<CalcInput>) => void;
   onSave: () => void;
   saved: boolean;
   onBack: () => void;
 }
 
 /** ساخت PDF از برگ فاکتور و ذخیره (دانلود مرورگر یا پل اندروید) */
-async function buildInvoicePdf(node: HTMLElement): Promise<{ blob: Blob; dataUrl: string }> {
+async function buildInvoicePdf(
+  node: HTMLElement
+): Promise<{ blob: Blob; dataUrl: string }> {
   const [{ toCanvas }, { jsPDF }] = await Promise.all([
     import("html-to-image"),
     import("jspdf"),
@@ -70,10 +85,22 @@ async function buildInvoicePdf(node: HTMLElement): Promise<{ blob: Blob; dataUrl
   return { blob: pdf.output("blob"), dataUrl: pdf.output("datauristring") };
 }
 
+/** ویژگی‌های نمایش‌داده‌شده در هدر فاکتور */
+const FEATURES = [
+  { icon: Crosshair, label: "دقت بالا" },
+  { icon: Timer, label: "سرعت اجرا" },
+  { icon: Gem, label: "کیفیت برش" },
+  { icon: Cog, label: "قابل اعتماد" },
+] as const;
+
+const NAVY = "#13233a";
+const ORANGE = "#f39c1d";
+
 export function InvoiceView({
   input,
   invoiceNumber,
   onInvoiceNumberChange,
+  onPatch,
   onSave,
   saved,
   onBack,
@@ -82,6 +109,7 @@ export function InvoiceView({
   const result = useMemo(() => calculate(input), [input]);
   const [date] = useState(() => new Date());
   const dateStr = todayJalali(date);
+  const validStr = todayJalali(new Date(date.getTime() + 7 * 86_400_000));
   const [exporting, setExporting] = useState(false);
   // پل اندروید موجود است؟ (در WebView اپ APK چاپ سیستم کار نمی‌کند)
   const [hasBridge, setHasBridge] = useState(false);
@@ -91,6 +119,12 @@ export function InvoiceView({
         !!(window as unknown as Record<string, unknown>).AndroidBridge
     );
   }, []);
+
+  const baseTotal = result.invoiceTotal;
+  const discount = Number(input.discountAmount) || 0;
+  const vatPct = Number(input.vatPercent) || 0;
+  const vatAmount = result.vatAmount;
+  const grandTotal = result.grandTotal;
 
   const handleDownloadPdf = async () => {
     const node = document.getElementById("invoice-sheet");
@@ -140,12 +174,32 @@ export function InvoiceView({
     }
   };
 
+  const numPatch = (key: "vatPercent" | "discountAmount") => (raw: string) => {
+    const clean = toEnDigits(raw).replace(/[^\d.]/g, "");
+    onPatch({ [key]: clean === "" ? 0 : Number(clean) });
+  };
+
   const customerDisplay = input.customerName.trim()
-    ? `شرکت/آقای ${input.customerName.trim()}`
+    ? input.customerName.trim()
     : "مشتری تعیین نشده";
   const phoneDisplay = input.customerPhone.trim()
     ? input.customerPhone.trim()
-    : "شماره وارد نشده";
+    : "—";
+  const addressDisplay = input.customerAddress.trim()
+    ? input.customerAddress.trim()
+    : "—";
+
+  const metaPills = [
+    { icon: FileText, label: "شماره فاکتور:", value: invoiceNumber ? faNum(invoiceNumber) : "—" },
+    { icon: CalendarDays, label: "تاریخ فاکتور:", value: dateStr },
+    { icon: Hourglass, label: "مهلت اعتبار:", value: validStr },
+  ];
+
+  const customerRows: [string, string][] = [
+    ["نام شرکت / شخص:", customerDisplay],
+    ["شماره تماس:", phoneDisplay],
+    ["آدرس:", addressDisplay],
+  ];
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -162,13 +216,41 @@ export function InvoiceView({
             <Input
               id="invNo"
               dir="ltr"
-              className="no-spinner h-9 w-28 text-left"
+              className="no-spinner h-9 w-24 text-left"
               value={invoiceNumber}
               onChange={(e) =>
                 onInvoiceNumberChange(
                   toEnDigits(e.target.value).replace(/[^\d]/g, "")
                 )
               }
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="vatPct" className="whitespace-nowrap text-xs">
+              ارزش افزوده ٪:
+            </Label>
+            <Input
+              id="vatPct"
+              dir="ltr"
+              inputMode="decimal"
+              className="no-spinner h-9 w-16 text-left"
+              value={vatPct > 0 ? String(vatPct) : ""}
+              placeholder="0"
+              onChange={(e) => numPatch("vatPercent")(e.target.value)}
+            />
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Label htmlFor="discount" className="whitespace-nowrap text-xs">
+              تخفیف (ریال):
+            </Label>
+            <Input
+              id="discount"
+              dir="ltr"
+              inputMode="decimal"
+              className="no-spinner h-9 w-28 text-left"
+              value={discount > 0 ? String(discount) : ""}
+              placeholder="0"
+              onChange={(e) => numPatch("discountAmount")(e.target.value)}
             />
           </div>
           <Button
@@ -199,8 +281,8 @@ export function InvoiceView({
           {!hasBridge && (
             <Button
               onClick={() => window.print()}
-              className="h-9 bg-amber-600 text-white hover:bg-amber-700"
               disabled={result.items.length === 0}
+              className="h-9 bg-[#f39c1d] text-white hover:bg-[#dd8a10]"
             >
               <Printer className="size-4" /> چاپ فاکتور
             </Button>
@@ -208,141 +290,282 @@ export function InvoiceView({
         </div>
       </div>
 
-      {/* برگ فاکتور */}
+      {/* ═══════════ برگ فاکتور ═══════════ */}
       <div
         id="invoice-sheet"
-        className="print-area rounded-xl border bg-white p-6 shadow-sm sm:p-10"
+        className="print-area overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm"
       >
-        {/* سربرگ */}
-        <div className="flex flex-wrap items-start justify-between gap-4 border-b-2 border-stone-800 pb-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-12 items-center justify-center rounded-lg bg-stone-900 text-amber-400">
-              <FileText className="size-6" />
-            </div>
+        {/* ── هدر سرمه‌ای با تصویر برش لیزر ── */}
+        <div className="relative min-h-[128px] overflow-hidden bg-[#13233a] sm:min-h-[150px]">
+          <img
+            src="/images/invoice-hero.png"
+            alt=""
+            className="absolute inset-y-0 right-0 h-full w-[58%] object-cover"
+            style={{ clipPath: "polygon(7% 0, 100% 0, 100% 100%, 0% 100%)" }}
+          />
+          {/* نوار مورب نارنجی روی لبه برش تصویر */}
+          <div
+            className="absolute inset-y-0 z-[1] w-3.5 bg-gradient-to-b from-[#f6a21e] to-[#dd7d0b]"
+            style={{
+              left: "calc(42% + 8px)",
+              transform: "skewX(-13.5deg)",
+            }}
+          />
+          {/* عنوان و ویژگی‌ها — سمت چپ */}
+          <div className="absolute inset-y-0 left-0 z-10 flex w-[42%] flex-col justify-center gap-2.5 p-4 sm:p-5">
             <div>
-              <h1 className="text-xl font-extrabold">فاکتور برش لیزر</h1>
-              <p className="mt-0.5 text-xs text-stone-500">
-                محاسبه قیمت برش، پرس و فروش ورق
+              <p className="text-base font-black leading-7 text-[#f6a21e] sm:text-lg">
+                فاکتور خدمات
+              </p>
+              <p className="text-xl font-black text-white sm:text-2xl">
+                برش لیزر
+              </p>
+              <p
+                dir="ltr"
+                className="mt-1 text-right text-[8px] font-semibold tracking-[0.35em] text-slate-400 sm:text-[9px]"
+              >
+                LASER CUTTING INVOICE
               </p>
             </div>
-          </div>
-          <div className="space-y-1 text-left text-sm">
-            <p>
-              <span className="text-stone-500">تاریخ: </span>
-              <span className="font-semibold tabular-nums">{dateStr}</span>
-            </p>
-            <p>
-              <span className="text-stone-500">شماره فاکتور: </span>
-              <span className="font-semibold tabular-nums">
-                {invoiceNumber ? faNum(invoiceNumber) : "—"}
-              </span>
-            </p>
-          </div>
-        </div>
-
-        {/* اطلاعات مشتری */}
-        <div className="grid gap-3 border-b py-4 sm:grid-cols-2">
-          <p className="text-sm">
-            <span className="text-stone-500">نام شخص / شرکت: </span>
-            <span className="font-semibold">{customerDisplay}</span>
-          </p>
-          <p className="text-sm sm:text-left">
-            <span className="text-stone-500">شماره موبایل: </span>
-            <span className="font-semibold tabular-nums" dir="ltr">
-              {phoneDisplay}
-            </span>
-          </p>
-        </div>
-
-        {/* جدول اقلام */}
-        <table className="mt-4 w-full border-collapse text-sm">
-          <thead>
-            <tr className="bg-stone-900 text-white">
-              <th className="border border-stone-800 px-2 py-2.5 font-medium">
-                ردیف
-              </th>
-              <th className="border border-stone-800 px-3 py-2.5 text-right font-medium">
-                شرح
-              </th>
-              <th className="border border-stone-800 px-2 py-2.5 font-medium">
-                مقدار
-              </th>
-              <th className="border border-stone-800 px-2 py-2.5 font-medium">
-                واحد
-              </th>
-              <th className="border border-stone-800 px-2 py-2.5 font-medium">
-                فی (ریال)
-              </th>
-              <th className="border border-stone-800 px-3 py-2.5 font-medium">
-                مبلغ (ریال)
-              </th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.items.length === 0 ? (
-              <tr>
-                <td
-                  colSpan={6}
-                  className="border px-3 py-10 text-center text-stone-400"
+            <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+              {FEATURES.map(({ icon: Icon, label }) => (
+                <span
+                  key={label}
+                  className="flex items-center gap-1 text-[10px] text-slate-200 sm:text-[11px]"
                 >
-                  هنوز موردی برای فاکتور وجود ندارد — به ماشین‌حساب بازگردید و
-                  مقادیر را کامل کنید
-                </td>
+                  <Icon className="size-3 shrink-0 text-[#f6a21e]" />
+                  {label}
+                </span>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="p-4 sm:p-6">
+          {/* ── مشخصات مشتری + شماره/تاریخ ── */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {/* مشخصات مشتری (راست) */}
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span
+                  className="flex size-7 items-center justify-center rounded-md text-[#f6a21e]"
+                  style={{ backgroundColor: NAVY }}
+                >
+                  <UserRound className="size-4" />
+                </span>
+                <h2 className="text-sm font-bold text-[#13233a]">
+                  مشخصات مشتری
+                </h2>
+              </div>
+              <div className="overflow-hidden rounded-lg border border-slate-200 text-xs sm:text-[13px]">
+                {customerRows.map(([label, value], i) => (
+                  <div
+                    key={label}
+                    className={`grid grid-cols-[110px_1fr] sm:grid-cols-[128px_1fr] ${
+                      i > 0 ? "border-t border-slate-200" : ""
+                    }`}
+                  >
+                    <span
+                      className="flex items-center border-l border-slate-200 bg-slate-100 px-2.5 py-2 font-semibold text-[#13233a]"
+                    >
+                      {label}
+                    </span>
+                    <span className="px-2.5 py-2 text-slate-700">{value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* شماره و تاریخ (چپ) */}
+            <div className="flex flex-col justify-center gap-2">
+              {metaPills.map(({ icon: Icon, label, value }) => (
+                <div key={label} className="flex items-center gap-2">
+                  <span
+                    className="flex size-8 shrink-0 items-center justify-center rounded-md text-[#f6a21e]"
+                    style={{ backgroundColor: NAVY }}
+                  >
+                    <Icon className="size-4" />
+                  </span>
+                  <div className="flex flex-1 items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-xs sm:text-[13px]">
+                    <span className="font-semibold text-[#13233a]">
+                      {label}
+                    </span>
+                    <span
+                      className="font-bold tabular-nums text-[#d97706]"
+                      suppressHydrationWarning
+                    >
+                      {value}
+                    </span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* ── جدول خدمات ── */}
+          <table className="mt-5 w-full border-collapse overflow-hidden rounded-lg text-[11px] sm:text-xs">
+            <thead>
+              <tr className="text-white" style={{ backgroundColor: NAVY }}>
+                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                  ردیف
+                </th>
+                <th className="border border-[#1e3450] px-2.5 py-2.5 text-right font-semibold">
+                  شرح خدمات
+                </th>
+                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                  جنس ورق
+                </th>
+                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                  ضخامت (mm)
+                </th>
+                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                  تعداد
+                </th>
+                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                  قیمت واحد (ریال)
+                </th>
+                <th className="border border-[#1e3450] px-2.5 py-2.5 font-semibold">
+                  مبلغ کل (ریال)
+                </th>
               </tr>
-            ) : (
-              result.items.map((it) => (
-                <tr key={it.row} className="even:bg-stone-50">
-                  <td className="border px-2 py-2.5 text-center tabular-nums">
-                    {faNum(it.row)}
-                  </td>
-                  <td className="border px-3 py-2.5">{it.desc}</td>
-                  <td className="border px-2 py-2.5 text-center tabular-nums">
-                    {faNum(it.qty)}
-                  </td>
-                  <td className="border px-2 py-2.5 text-center">{it.unit}</td>
-                  <td className="border px-2 py-2.5 text-center tabular-nums">
-                    {faMoney(it.unitPrice)}
-                  </td>
-                  <td className="border px-3 py-2.5 text-left tabular-nums">
-                    {faMoney(it.amount)}
+            </thead>
+            <tbody>
+              {result.items.length === 0 ? (
+                <tr>
+                  <td
+                    colSpan={7}
+                    className="border border-slate-200 px-3 py-10 text-center text-slate-400"
+                  >
+                    هنوز موردی برای فاکتور وجود ندارد — به ماشین‌حساب بازگردید و
+                    مقادیر را کامل کنید
                   </td>
                 </tr>
-              ))
-            )}
-            <tr className="bg-amber-50 font-bold">
-              <td
-                colSpan={5}
-                className="border border-stone-300 px-3 py-3 text-left"
-              >
-                جمع کل
-              </td>
-              <td className="border border-stone-300 px-3 py-3 text-left tabular-nums">
-                {faMoney(result.invoiceTotal)}
-              </td>
-            </tr>
-          </tbody>
-        </table>
+              ) : (
+                result.items.map((it, i) => (
+                  <tr
+                    key={it.row}
+                    className={i % 2 === 1 ? "bg-slate-100" : "bg-white"}
+                  >
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-center font-semibold tabular-nums text-[#13233a]">
+                      {faNum(it.row)}
+                    </td>
+                    <td className="border border-slate-200 px-2.5 py-2.5 font-medium text-slate-800">
+                      {it.desc}
+                    </td>
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-center text-slate-600">
+                      {it.material ?? "—"}
+                    </td>
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-center tabular-nums text-slate-600">
+                      {it.thickness ? faNum(it.thickness) : "—"}
+                    </td>
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-center tabular-nums text-slate-700">
+                      {faNum(it.qty)} {it.unit}
+                    </td>
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-center tabular-nums text-slate-700">
+                      {faMoney(it.unitPrice)}
+                    </td>
+                    <td className="border border-slate-200 px-2.5 py-2.5 text-center font-bold tabular-nums text-slate-900">
+                      {faMoney(it.amount)}
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
 
-        {/* جمع به حروف */}
-        <div className="mt-4 rounded-lg border-2 border-dashed border-stone-300 bg-stone-50 p-3">
-          <p className="text-xs text-stone-500">جمع کل به حروف:</p>
-          <p className="mt-1 text-sm font-semibold">
-            {result.invoiceTotal > 0
-              ? moneyToWords(result.invoiceTotal)
-              : "—"}
-          </p>
+          {/* ── خلاصه مالی + توضیحات ── */}
+          <div className="mt-5 grid gap-4 sm:grid-cols-2">
+            {/* خلاصه مالی (راست) */}
+            <div className="overflow-hidden rounded-lg border border-slate-200 text-xs sm:text-[13px]">
+              <div className="flex items-center justify-between bg-slate-100 px-3 py-2.5">
+                <span className="font-semibold text-[#13233a]">
+                  جمع کل (ریال)
+                </span>
+                <span className="font-bold tabular-nums text-slate-800">
+                  {faMoney(baseTotal)}
+                </span>
+              </div>
+              {discount > 0 && (
+                <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5">
+                  <span className="font-semibold text-[#13233a]">تخفیف</span>
+                  <span className="font-bold tabular-nums text-rose-600">
+                    {faMoney(discount)}−
+                  </span>
+                </div>
+              )}
+              {vatPct > 0 && (
+                <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5">
+                  <span className="font-semibold text-[#13233a]">
+                    مالیات بر ارزش افزوده ({faNum(vatPct)}٪)
+                  </span>
+                  <span className="font-bold tabular-nums text-slate-800">
+                    {faMoney(vatAmount)}
+                  </span>
+                </div>
+              )}
+              <div
+                className="flex items-center justify-between px-3 py-3 text-sm"
+                style={{ backgroundColor: ORANGE }}
+              >
+                <span className="font-black text-[#13233a]">
+                  مبلغ قابل پرداخت (ریال)
+                </span>
+                <span className="font-black tabular-nums text-[#13233a]">
+                  {faMoney(grandTotal)}
+                </span>
+              </div>
+              <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] leading-4 text-slate-500">
+                به حروف: {grandTotal > 0 ? moneyToWords(grandTotal) : "—"}
+              </div>
+            </div>
+
+            {/* توضیحات (چپ) */}
+            <div className="rounded-lg border border-slate-200 p-3">
+              <div className="mb-2 flex items-center justify-center gap-1.5">
+                <ClipboardList className="size-4 text-[#f39c1d]" />
+                <span className="text-sm font-bold text-[#e07f0e]">
+                  توضیحات:
+                </span>
+              </div>
+              <ul className="space-y-1.5 text-[10px] leading-4 text-slate-600 sm:text-[11px] sm:leading-5">
+                {INVOICE_TERMS.map((t) => (
+                  <li key={t} className="flex items-start gap-1.5">
+                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#f39c1d]" />
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+
+          {/* ── امضاها ── */}
+          <div className="mt-6 grid grid-cols-2 gap-4">
+            {["مهر و امضای فروشنده", "مهر و امضای مشتری"].map((label) => (
+              <div
+                key={label}
+                className="rounded-lg border border-dashed border-slate-300 px-3 pb-7 pt-2 text-center text-[11px] text-slate-500"
+              >
+                {label}
+                <div className="mt-5 border-t border-dashed border-slate-300" />
+              </div>
+            ))}
+          </div>
         </div>
 
-        {/* امضاها */}
-        <div className="mt-10 grid grid-cols-2 gap-6 text-center text-sm">
-          <div>
-            <p className="text-stone-500">امضای فروشنده</p>
-            <div className="mt-8 border-t border-stone-300 pt-1" />
-          </div>
-          <div>
-            <p className="text-stone-500">امضای خریدار</p>
-            <div className="mt-8 border-t border-stone-300 pt-1" />
-          </div>
+        {/* ── فوتر سرمه‌ای ── */}
+        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[3px] border-[#f39c1d] bg-[#13233a] px-4 py-3 text-[11px] text-slate-200 sm:px-6 sm:text-xs">
+          <span className="flex items-center gap-1.5">
+            <MapPin className="size-3.5 shrink-0 text-[#f6a21e]" />
+            {BUSINESS.address}
+          </span>
+          <span className="flex items-center gap-1.5 tabular-nums">
+            <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
+            <span dir="ltr">{faNum(BUSINESS.phone)}</span>
+          </span>
+          <span className="flex items-center gap-1.5">
+            <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
+            <span dir="ltr">@{BUSINESS.instagram}</span>
+          </span>
         </div>
       </div>
     </div>

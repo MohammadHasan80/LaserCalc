@@ -70,7 +70,7 @@ export default function Home() {
       invoiceNumber,
       input,
       result.items,
-      result.invoiceTotal
+      result.grandTotal
     );
     setInvoices(saveInvoice(inv));
     setSaved(true);
@@ -82,7 +82,7 @@ export default function Home() {
   };
 
   const handleViewSaved = (inv: SavedInvoice) => {
-    setInput(inv.input);
+    setInput({ ...EMPTY_INPUT, ...inv.input });
     setInvoiceNumber(inv.number);
     setSaved(true);
     setTab("invoice");
@@ -171,6 +171,7 @@ export default function Home() {
               input={input}
               invoiceNumber={invoiceNumber}
               onInvoiceNumberChange={setInvoiceNumber}
+              onPatch={(patch) => setInput((prev) => ({ ...prev, ...patch }))}
               onSave={handleSave}
               saved={saved}
               onBack={() => setTab("calc")}

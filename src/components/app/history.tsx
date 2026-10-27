@@ -75,7 +75,7 @@ export function HistoryView({ invoices, onView, onDelete }: Props) {
                 {inv.customerName.trim() || "بدون نام مشتری"}
               </p>
               <p className="mt-0.5 text-xs text-muted-foreground tabular-nums">
-                {inv.items.length} ردیف • جمع کل: {faMoney(inv.total)} ریال
+                {inv.items.length} ردیف • قابل پرداخت: {faMoney(inv.total)} ریال
               </p>
             </div>
             <div className="flex items-center gap-2">
