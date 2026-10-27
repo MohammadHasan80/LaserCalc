@@ -21,7 +21,10 @@ function Switch({
       <SwitchPrimitive.Thumb
         data-slot="switch-thumb"
         className={cn(
-          "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(100%-2px)] data-[state=unchecked]:translate-x-0"
+          // اپ همیشه RTL است: تامب در حالت خاموش سمت راست (ابتدای inline) است؛
+          // در حالت روشن باید به سمت چپ حرکت کند — translate مثبت در RTL تامب را
+          // بیرون از ریل می‌برد، پس جابه‌جایی منفی استفاده می‌شود.
+          "bg-background dark:data-[state=unchecked]:bg-foreground dark:data-[state=checked]:bg-primary-foreground pointer-events-none block size-4 rounded-full ring-0 transition-transform data-[state=checked]:translate-x-[calc(-100%_+_2px)] data-[state=unchecked]:translate-x-0"
         )}
       />
     </SwitchPrimitive.Root>

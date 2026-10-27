@@ -191,7 +191,7 @@ export function InvoiceView({
     : "—";
 
   const metaPills = [
-    { icon: FileText, label: "شماره فاکتور:", value: invoiceNumber ? faNum(invoiceNumber) : "—" },
+    { icon: FileText, label: "شماره فاکتور:", value: invoiceNumber || "—" },
     { icon: CalendarDays, label: "تاریخ فاکتور:", value: dateStr },
     { icon: Hourglass, label: "مهلت اعتبار:", value: validStr },
   ];
@@ -561,7 +561,8 @@ export function InvoiceView({
           </span>
           <span className="flex items-center gap-1.5 tabular-nums">
             <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
-            <span dir="ltr">{faNum(BUSINESS.phone)}</span>
+            {/* شماره تلفن باید عیناً بدون ممیز و بدون تبدیل نمایش داده شود */}
+            <span dir="ltr">{BUSINESS.phone}</span>
           </span>
           <span className="flex items-center gap-1.5">
             <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
