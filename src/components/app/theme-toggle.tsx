@@ -26,10 +26,22 @@ export function ThemeToggle() {
 
   const isDark = resolvedTheme === "dark";
 
+  /** ذخیره تم در سمت اندروید (SharedPreferences) — برای رنگ پس‌زمینه WebView */
+  const mirrorThemeToNative = (theme: string) => {
+    if (typeof window === "undefined") return;
+    const bridge = (window as unknown as Record<string, unknown>)
+      .AndroidBridge as { saveTheme?: (t: string) => void } | undefined;
+    bridge?.saveTheme?.(theme);
+  };
+
   return (
     <button
       type="button"
-      onClick={() => setTheme(isDark ? "light" : "dark")}
+      onClick={() => {
+        const next = isDark ? "light" : "dark";
+        mirrorThemeToNative(next);
+        setTheme(next);
+      }}
       aria-label={isDark ? "فعال‌سازی حالت روشن" : "فعال‌سازی حالت تاریک"}
       title={isDark ? "حالت روشن" : "حالت تاریک"}
       className="flex size-9 shrink-0 items-center justify-center rounded-lg border border-stone-700 bg-stone-800 text-stone-200 shadow-sm transition-colors hover:bg-stone-700 active:bg-stone-600"
