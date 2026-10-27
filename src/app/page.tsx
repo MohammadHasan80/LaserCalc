@@ -9,6 +9,7 @@ import { Zap, Calculator, ReceiptText, History, Flame } from "lucide-react";
 import { Calculator as CalcView } from "@/components/app/calculator";
 import { InvoiceView } from "@/components/app/invoice";
 import { HistoryView } from "@/components/app/history";
+import { ThemeToggle } from "@/components/app/theme-toggle";
 import {
   EMPTY_INPUT,
   calculate,
@@ -118,6 +119,7 @@ export default function Home() {
             <span className="rounded-full bg-stone-800 px-3 py-1 text-xs text-stone-300 tabular-nums">
               تاریخ: {todayJalali()}
             </span>
+            <ThemeToggle />
           </div>
         </div>
       </header>

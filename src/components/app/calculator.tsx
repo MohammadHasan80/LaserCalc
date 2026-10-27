@@ -124,7 +124,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base">
-              <User className="size-4 text-amber-600" />
+              <User className="size-4 text-amber-600 dark:text-amber-500" />
               اطلاعات مشتری
             </CardTitle>
           </CardHeader>
@@ -172,7 +172,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Zap className="size-4 text-amber-600" />
+              <Zap className="size-4 text-amber-600 dark:text-amber-500" />
               مشخصات برش
             </CardTitle>
             <CardDescription>
@@ -274,7 +274,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
         <Card>
           <CardHeader className="pb-4">
             <CardTitle className="flex items-center gap-2 text-base">
-              <Scale className="size-4 text-amber-600" />
+              <Scale className="size-4 text-amber-600 dark:text-amber-500" />
               محاسبات ورق
             </CardTitle>
           </CardHeader>
@@ -389,7 +389,7 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
           <Card className="overflow-hidden border-amber-200/60">
             <CardHeader className="bg-amber-50/70 pb-4 dark:bg-amber-950/20">
               <CardTitle className="flex items-center gap-2 text-base">
-                <CalculatorIcon className="size-4 text-amber-600" />
+                <CalculatorIcon className="size-4 text-amber-600 dark:text-amber-500" />
                 نتایج محاسبه
               </CardTitle>
             </CardHeader>

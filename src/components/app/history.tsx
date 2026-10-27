@@ -49,7 +49,7 @@ export function HistoryView({ invoices, onView, onDelete }: Props) {
     <Card className="mx-auto max-w-4xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
-          <History className="size-4 text-amber-600" />
+          <History className="size-4 text-amber-600 dark:text-amber-500" />
           فاکتورهای ذخیره‌شده
         </CardTitle>
         <CardDescription>
@@ -64,7 +64,7 @@ export function HistoryView({ invoices, onView, onDelete }: Props) {
           >
             <div className="min-w-0">
               <div className="flex flex-wrap items-center gap-2">
-                <Badge className="bg-stone-900 text-amber-400 hover:bg-stone-800">
+                <Badge className="bg-stone-900 text-amber-400 hover:bg-stone-800 dark:bg-stone-800 dark:hover:bg-stone-700">
                   شماره {faMoney(inv.number)}
                 </Badge>
                 <span className="text-xs text-muted-foreground tabular-nums">
