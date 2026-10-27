@@ -4,6 +4,12 @@ import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
 import {
   Printer,
@@ -205,91 +211,99 @@ export function InvoiceView({
   return (
     <div className="mx-auto max-w-4xl">
       {/* نوار ابزار (چاپ نمی‌شود) */}
-      <div className="no-print mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div className="no-print mb-4 flex items-center">
         <Button variant="ghost" onClick={onBack} className="h-9">
           <ArrowRight className="size-4" /> بازگشت به ماشین‌حساب
         </Button>
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="flex items-center gap-2">
-            <Label htmlFor="invNo" className="whitespace-nowrap text-xs">
-              شماره فاکتور:
-            </Label>
-            <Input
-              id="invNo"
-              dir="ltr"
-              className="no-spinner h-9 w-24 text-right"
-              value={invoiceNumber}
-              onChange={(e) =>
-                onInvoiceNumberChange(
-                  toEnDigits(e.target.value).replace(/[^\d]/g, "")
-                )
-              }
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Label htmlFor="vatPct" className="whitespace-nowrap text-xs">
-              ارزش افزوده ٪:
-            </Label>
-            <Input
-              id="vatPct"
-              dir="ltr"
-              inputMode="decimal"
-              className="no-spinner h-9 w-16 text-right"
-              value={vatPct > 0 ? String(vatPct) : ""}
-              placeholder="0"
-              onChange={(e) => numPatch("vatPercent")(e.target.value)}
-            />
-          </div>
-          <div className="flex items-center gap-1.5">
-            <Label htmlFor="discount" className="whitespace-nowrap text-xs">
-              تخفیف (ریال):
-            </Label>
-            <Input
-              id="discount"
-              dir="ltr"
-              inputMode="decimal"
-              className="no-spinner h-9 w-28 text-right"
-              value={discount > 0 ? String(discount) : ""}
-              placeholder="0"
-              onChange={(e) => numPatch("discountAmount")(e.target.value)}
-            />
-          </div>
-          <Button
-            variant="outline"
-            onClick={onSave}
-            disabled={result.items.length === 0}
-            className="h-9"
-          >
-            {saved ? (
-              <CheckCircle2 className="size-4 text-emerald-600" />
-            ) : (
-              <Save className="size-4" />
-            )}
-            {saved ? "ذخیره شد" : "ذخیره فاکتور"}
-          </Button>
-          <Button
-            onClick={handleDownloadPdf}
-            disabled={result.items.length === 0 || exporting}
-            className="h-9"
-          >
-            {exporting ? (
-              <Loader2 className="size-4 animate-spin" />
-            ) : (
-              <Download className="size-4" />
-            )}
-            {exporting ? "در حال ساخت…" : "دانلود PDF"}
-          </Button>
-          {!hasBridge && (
-            <Button
-              onClick={() => window.print()}
-              disabled={result.items.length === 0}
-              className="h-9 bg-[#f39c1d] text-white hover:bg-[#dd8a10]"
-            >
-              <Printer className="size-4" /> چاپ فاکتور
-            </Button>
-          )}
-        </div>
       </div>
+
+      {/* تنظیمات فاکتور — داخل کادر مثل بخش ماشین‌حساب (چاپ نمی‌شود) */}
+      <Card className="no-print mb-4">
+        <CardHeader className="pb-4">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <ClipboardList className="size-4 text-amber-600 dark:text-amber-500" />
+            تنظیمات فاکتور
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="space-y-2">
+              <Label htmlFor="invNo">شماره فاکتور</Label>
+              <Input
+                id="invNo"
+                dir="ltr"
+                className="no-spinner text-right"
+                value={invoiceNumber}
+                onChange={(e) =>
+                  onInvoiceNumberChange(
+                    toEnDigits(e.target.value).replace(/[^\d]/g, "")
+                  )
+                }
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="vatPct">ارزش افزوده ٪</Label>
+              <Input
+                id="vatPct"
+                dir="ltr"
+                inputMode="decimal"
+                className="no-spinner text-right"
+                value={vatPct > 0 ? String(vatPct) : ""}
+                placeholder="0"
+                onChange={(e) => numPatch("vatPercent")(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="discount">تخفیف (ریال)</Label>
+              <Input
+                id="discount"
+                dir="ltr"
+                inputMode="decimal"
+                className="no-spinner text-right"
+                value={discount > 0 ? String(discount) : ""}
+                placeholder="0"
+                onChange={(e) => numPatch("discountAmount")(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={onSave}
+              disabled={result.items.length === 0}
+              className="min-w-40 flex-1"
+            >
+              {saved ? (
+                <CheckCircle2 className="size-4 text-emerald-600" />
+              ) : (
+                <Save className="size-4" />
+              )}
+              {saved ? "ذخیره شد" : "ذخیره فاکتور"}
+            </Button>
+            <Button
+              onClick={handleDownloadPdf}
+              disabled={result.items.length === 0 || exporting}
+              className="min-w-40 flex-1"
+            >
+              {exporting ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              {exporting ? "در حال ساخت…" : "دانلود PDF"}
+            </Button>
+            {!hasBridge && (
+              <Button
+                onClick={() => window.print()}
+                disabled={result.items.length === 0}
+                className="min-w-40 flex-1 bg-[#f39c1d] text-white hover:bg-[#dd8a10]"
+              >
+                <Printer className="size-4" /> چاپ فاکتور
+              </Button>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       {/* ═══════════ برگ فاکتور ═══════════ */}
       <div
