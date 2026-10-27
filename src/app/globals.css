@@ -172,6 +172,23 @@
   td.text-center {
     text-align: center;
   }
+  /* غیرفعال کردن انتخاب و کپی متن (حس اپ نیتیو) */
+  html,
+  body {
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+    -webkit-touch-callout: none;
+  }
+  /* ورودی‌ها باید برای ویرایش و جای‌گذاری مکان‌نما قابل انتخاب بمانند */
+  input,
+  textarea,
+  select {
+    -webkit-user-select: text;
+    -moz-user-select: text;
+    user-select: text;
+  }
 }
 
 /* ═══ استایل چاپ فاکتور ═══ */
