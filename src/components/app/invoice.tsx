@@ -24,6 +24,7 @@ import {
   MapPin,
   Phone,
   Instagram,
+  Globe,
 } from "lucide-react";
 import { calculate, type CalcInput } from "@/lib/pricing";
 import { BUSINESS, INVOICE_TERMS } from "@/lib/business";
@@ -315,16 +316,16 @@ export function InvoiceView({
           <div className="absolute inset-y-0 left-0 z-10 flex w-[42%] flex-col justify-center gap-2.5 p-4 sm:p-5">
             <div>
               <p className="text-base font-black leading-7 text-[#f6a21e] sm:text-lg">
-                فاکتور خدمات
+                فاکتور خدمات برش لیزر
               </p>
-              <p className="text-xl font-black text-white sm:text-2xl">
-                برش لیزر
+              <p className="text-lg font-black leading-8 text-white sm:text-2xl">
+                {BUSINESS.fullName}
               </p>
               <p
                 dir="ltr"
-                className="mt-1 text-right text-[8px] font-semibold tracking-[0.35em] text-slate-400 sm:text-[9px]"
+                className="mt-1 text-right text-[8px] font-semibold tracking-[0.3em] text-slate-400 sm:text-[9px]"
               >
-                LASER CUTTING INVOICE
+                AZARAKHSH TABLO BASTAN CO.
               </p>
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
@@ -565,6 +566,10 @@ export function InvoiceView({
           <span className="flex items-center gap-1.5">
             <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
             <span dir="ltr">@{BUSINESS.instagram}</span>
+          </span>
+          <span className="flex items-center gap-1.5" dir="ltr">
+            <Globe className="size-3.5 shrink-0 text-[#f6a21e]" />
+            <span>{BUSINESS.website}</span>
           </span>
         </div>
       </div>
