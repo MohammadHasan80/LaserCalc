@@ -101,5 +101,5 @@ bun run dev
 
 آخرین نسخه از بخش [Releases](../../releases) قابل دریافت است:
 
-- 🤖 **اندروید (APK)** — `cutting-price-app-v1.8.0.apk` — نصب مستقیم، کاملاً آفلاین، ذخیره PDF فاکتور در Downloads
+- 🤖 **اندروید (APK)** — `cutting-price-app-v1.8.1.apk` — نصب مستقیم، کاملاً آفلاین، ذخیره PDF فاکتور در Downloads
 - 💻 **نسخه وب** — `cutting-price-app-v1.0.0.zip` — اجرا با `npm install && npm run dev`
