@@ -3,7 +3,7 @@ import "./globals.css";
 import { Toaster } from "@/components/ui/toaster";
 
 export const metadata: Metadata = {
-  title: "اپ قیمت برش لیزر | محاسبه و فاکتور",
+  title: "قیمت برش لیزر | محاسبه و فاکتور",
   description:
     "محاسبه‌گر قیمت برش لیزر، پرس و ورق به همراه صدور فاکتور فارسی با چاپ",
   keywords: ["برش لیزر", "فاکتور", "قیمت ورق", "پرس", "محاسبه قیمت"],

@@ -104,7 +104,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="flex items-center gap-1.5 text-lg font-extrabold">
-                اپ قیمت برش لیزر
+                قیمت برش لیزر
                 <Zap className="size-4 text-amber-400" />
               </h1>
               <p className="text-xs text-stone-400">
@@ -191,7 +191,7 @@ export default function Home() {
       {/* فوتر */}
       <footer className="no-print mt-auto border-t bg-stone-900 py-4 text-center text-xs text-stone-400">
         <p>
-          اپ قیمت برش لیزر — بر اساس نرخ‌های روز؛ برای تغییر نرخ‌ها با پشتیبانی
+          قیمت برش لیزر — بر اساس نرخ‌های روز؛ برای تغییر نرخ‌ها با پشتیبانی
           هماهنگ کنید
         </p>
       </footer>

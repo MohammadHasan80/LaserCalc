@@ -407,25 +407,25 @@ export function InvoiceView({
           <table className="mt-5 w-full border-collapse overflow-hidden rounded-lg text-[11px] sm:text-xs">
             <thead>
               <tr className="text-white" style={{ backgroundColor: NAVY }}>
-                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
                   ردیف
                 </th>
                 <th className="border border-[#1e3450] px-2.5 py-2.5 text-right font-semibold">
                   شرح خدمات
                 </th>
-                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
                   جنس ورق
                 </th>
-                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
                   ضخامت (mm)
                 </th>
-                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
                   تعداد
                 </th>
-                <th className="border border-[#1e3450] px-1.5 py-2.5 font-semibold">
+                <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
                   قیمت واحد (ریال)
                 </th>
-                <th className="border border-[#1e3450] px-2.5 py-2.5 font-semibold">
+                <th className="border border-[#1e3450] px-2.5 py-2.5 text-right font-semibold">
                   مبلغ کل (ریال)
                 </th>
               </tr>
@@ -447,25 +447,25 @@ export function InvoiceView({
                     key={it.row}
                     className={i % 2 === 1 ? "bg-slate-100" : "bg-white"}
                   >
-                    <td className="border border-slate-200 px-1.5 py-2.5 text-center font-semibold tabular-nums text-[#13233a]">
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-right font-semibold tabular-nums text-[#13233a]">
                       {faNum(it.row)}
                     </td>
-                    <td className="border border-slate-200 px-2.5 py-2.5 font-medium text-slate-800">
+                    <td className="border border-slate-200 px-2.5 py-2.5 text-right font-medium text-slate-800">
                       {it.desc}
                     </td>
-                    <td className="border border-slate-200 px-1.5 py-2.5 text-center text-slate-600">
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-right text-slate-600">
                       {it.material ?? "—"}
                     </td>
-                    <td className="border border-slate-200 px-1.5 py-2.5 text-center tabular-nums text-slate-600">
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-600">
                       {it.thickness ? faNum(it.thickness) : "—"}
                     </td>
-                    <td className="border border-slate-200 px-1.5 py-2.5 text-center tabular-nums text-slate-700">
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-700">
                       {faNum(it.qty)} {it.unit}
                     </td>
-                    <td className="border border-slate-200 px-1.5 py-2.5 text-center tabular-nums text-slate-700">
+                    <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-700">
                       {faMoney(it.unitPrice)}
                     </td>
-                    <td className="border border-slate-200 px-2.5 py-2.5 text-center font-bold tabular-nums text-slate-900">
+                    <td className="border border-slate-200 px-2.5 py-2.5 text-right font-bold tabular-nums text-slate-900">
                       {faMoney(it.amount)}
                     </td>
                   </tr>
@@ -522,7 +522,7 @@ export function InvoiceView({
 
             {/* توضیحات (چپ) */}
             <div className="rounded-lg border border-slate-200 p-3">
-              <div className="mb-2 flex items-center justify-center gap-1.5">
+              <div className="mb-2 flex items-center gap-1.5">
                 <ClipboardList className="size-4 text-[#f39c1d]" />
                 <span className="text-sm font-bold text-[#e07f0e]">
                   توضیحات:
