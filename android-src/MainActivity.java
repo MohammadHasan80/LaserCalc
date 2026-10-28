@@ -3,6 +3,7 @@ package com.mohammadhasan.lasercut;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
@@ -68,7 +69,24 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
-        webView.setWebViewClient(new WebViewClient());
+        // فقط نشانی‌های داخلی (وب‌سرور محلی) در خود WebView باز می‌شوند؛
+        // هر نشانی بیرونی (مثل لینک تلگرام) با اپ مرتبط یا مرورگر خارجی باز می‌شود
+        webView.setWebViewClient(new WebViewClient() {
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url) {
+                Uri uri = Uri.parse(url);
+                String host = uri.getHost();
+                if (host != null && host.equals("127.0.0.1")) {
+                    return false; // ناوبری داخلی — خود WebView
+                }
+                try {
+                    startActivity(new Intent(Intent.ACTION_VIEW, uri));
+                } catch (Exception ignored) {
+                    // اپ/مرورگری برای این نشانی نصب نیست — نادیده بگیر
+                }
+                return true; // ناوبری بیرونی — WebView جاری دست‌نخورده بماند
+            }
+        });
         webView.setBackgroundColor(isDarkTheme() ? 0xFF0c0a09 : 0xFFf5f5f4);
         webView.addJavascriptInterface(new PdfBridge(), "AndroidBridge");
 
