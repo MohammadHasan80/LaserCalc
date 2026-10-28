@@ -232,6 +232,8 @@ export function InvoiceView({
               <Input
                 id="invNo"
                 dir="ltr"
+                type="tel"
+                inputMode="numeric"
                 className="no-spinner text-right"
                 value={invoiceNumber}
                 onChange={(e) =>
