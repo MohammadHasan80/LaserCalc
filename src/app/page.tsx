@@ -5,7 +5,7 @@ import { DirectionProvider } from "@radix-ui/react-direction";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Calculator, ReceiptText, History, Flame } from "lucide-react";
+import { Zap, Calculator, ReceiptText, History, Banknote } from "lucide-react";
 import { Calculator as CalcView } from "@/components/app/calculator";
 import { InvoiceView } from "@/components/app/invoice";
 import { HistoryView } from "@/components/app/history";
@@ -103,7 +103,7 @@ export default function Home() {
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
           <div className="flex items-center gap-3">
             <div className="flex size-10 items-center justify-center rounded-lg bg-amber-600 text-white shadow-lg shadow-amber-600/30">
-              <Flame className="size-5" />
+              <Banknote className="size-5" />
             </div>
             <div>
               <h1 className="flex items-center gap-1.5 text-lg font-extrabold">
