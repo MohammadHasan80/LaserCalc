@@ -371,7 +371,7 @@ export const EMPTY_INPUT: CalcInput = {
   designCost: 0,
   sheetFromCustomer: true,
   sheetPriceManual: "",
-  vatPercent: 10,
+  vatPercent: 0, // پیش‌فرض: بدون مالیات بر ارزش افزوده
   discountAmount: 0,
   dims: [{ id: "d1", lengthCm: "", widthCm: "" }],
 };

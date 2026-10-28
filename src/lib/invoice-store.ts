@@ -46,14 +46,10 @@ export function deleteInvoice(id: string): SavedInvoice[] {
   return next;
 }
 
-export function loadInput(fallback: CalcInput): CalcInput {
-  if (typeof window === "undefined") return fallback;
-  return safeParse<CalcInput>(localStorage.getItem(INPUT_KEY), fallback);
-}
-
-export function persistInput(input: CalcInput) {
+/** پاک‌سازی ورودی‌های ذخیره‌شدهٔ فرم — پس از خروج از برنامه مقادیر خالی باشد */
+export function clearInput() {
   if (typeof window === "undefined") return;
-  localStorage.setItem(INPUT_KEY, JSON.stringify(input));
+  localStorage.removeItem(INPUT_KEY);
 }
 
 /** شماره فاکتور بعدی (شروع از ۱۰۰۱) */

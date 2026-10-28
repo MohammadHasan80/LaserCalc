@@ -33,6 +33,7 @@ import {
   Scale,
   ReceiptText,
   Tags,
+  Eraser,
 } from "lucide-react";
 import {
   SHEET_TYPES,
@@ -51,9 +52,10 @@ interface Props {
   input: CalcInput;
   onChange: (input: CalcInput) => void;
   onGoInvoice: () => void;
+  onClear: () => void;
 }
 
-export function Calculator({ input, onChange, onGoInvoice }: Props) {
+export function Calculator({ input, onChange, onGoInvoice, onClear }: Props) {
   const result = useMemo(() => calculate(input), [input]);
 
   const set = <K extends keyof CalcInput>(key: K, value: CalcInput[K]) =>
@@ -543,6 +545,15 @@ export function Calculator({ input, onChange, onGoInvoice }: Props) {
               >
                 <ReceiptText className="size-4" />
                 مشاهده و چاپ فاکتور
+              </Button>
+
+              <Button
+                variant="outline"
+                className="w-full border-rose-200 text-rose-600 hover:bg-rose-50 hover:text-rose-700 dark:border-rose-900/60 dark:text-rose-400 dark:hover:bg-rose-950 dark:hover:text-rose-300"
+                onClick={onClear}
+              >
+                <Eraser className="size-4" />
+                پاک کردن مقادیر
               </Button>
 
               {result.totalPriceError && (

@@ -18,11 +18,10 @@ import {
 import {
   buildSavedInvoice,
   bumpInvoiceCounter,
+  clearInput,
   deleteInvoice,
   loadInvoices,
-  loadInput,
   nextInvoiceNumber,
-  persistInput,
   saveInvoice,
   type SavedInvoice,
 } from "@/lib/invoice-store";
@@ -37,27 +36,21 @@ export default function Home() {
   const [invoices, setInvoices] = useState<SavedInvoice[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("1001");
   const [saved, setSaved] = useState(false);
-  const [hydrated, setHydrated] = useState(false);
 
-  // بازیابی از localStorage (خواندن در callback تا از رندر آبشاری جلوگیری شود)
+  // در شروع برنامه: تاریخچه و شماره فاکتور بازیابی می‌شود اما مقادیر فرم همیشه خالی است
+  // (پس از خروج از برنامه، مقادیر قبلی نباید برگردند)
   useEffect(() => {
     let cancelled = false;
     Promise.resolve().then(() => {
       if (cancelled) return;
-      setInput({ ...EMPTY_INPUT, ...loadInput(EMPTY_INPUT) });
+      clearInput();
       setInvoices(loadInvoices());
       setInvoiceNumber(nextInvoiceNumber());
-      setHydrated(true);
     });
     return () => {
       cancelled = true;
     };
   }, []);
-
-  // ذخیره خودکار ورودی‌ها
-  useEffect(() => {
-    if (hydrated) persistInput(input);
-  }, [input, hydrated]);
 
   const result = useMemo(() => calculate(input), [input]);
 
@@ -75,12 +68,23 @@ export default function Home() {
       result.grandTotal
     );
     setInvoices(saveInvoice(inv));
-    setSaved(true);
     setInvoiceNumber(bumpInvoiceCounter());
+    // پس از ذخیره، مقادیر فرم خالی می‌شود و برای فاکتور جدید به ماشین‌حساب برمی‌گردیم
+    setInput({ ...EMPTY_INPUT });
+    setSaved(false);
+    setTab("calc");
     toast({
       title: "فاکتور ذخیره شد",
-      description: `فاکتور شماره ${inv.number} در تاریخچه ثبت شد.`,
+      description: `فاکتور شماره ${inv.number} در تاریخچه ثبت شد و مقادیر پاک شد.`,
     });
+  };
+
+  // پاک کردن همهٔ مقادیر فرم و بازگشت به حالت اولیه
+  const handleClear = () => {
+    setInput({ ...EMPTY_INPUT });
+    setSaved(false);
+    clearInput();
+    toast({ title: "مقادیر پاک شد", description: "همه فیلدها به حالت اولیه برگشتند." });
   };
 
   const handleViewSaved = (inv: SavedInvoice) => {
@@ -167,6 +171,7 @@ export default function Home() {
               input={input}
               onChange={setInput}
               onGoInvoice={goInvoice}
+              onClear={handleClear}
             />
           </TabsContent>
 
