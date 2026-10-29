@@ -17,6 +17,7 @@ import { Calculator as CalcView } from "@/components/app/calculator";
 import { InvoiceView } from "@/components/app/invoice";
 import { HistoryView } from "@/components/app/history";
 import { RatesView } from "@/components/app/rates";
+import { BusinessView } from "@/components/app/business";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import {
   emptyInput,
@@ -30,6 +31,15 @@ import {
   saveRates,
   resetRates,
 } from "@/lib/rates-store";
+import {
+  loadBusiness,
+  saveBusiness,
+  resetBusiness,
+} from "@/lib/business-store";
+import {
+  DEFAULT_BUSINESS,
+  type BusinessConfig,
+} from "@/lib/business";
 import {
   buildSavedInvoice,
   bumpInvoiceCounter,
@@ -53,6 +63,10 @@ export default function Home() {
   const [saved, setSaved] = useState(false);
   const [rates, setRates] = useState<RatesConfig>(DEFAULT_RATES);
   const [ratesDraft, setRatesDraft] = useState<RatesConfig | null>(null);
+  const [business, setBusiness] = useState<BusinessConfig>(DEFAULT_BUSINESS);
+  const [businessDraft, setBusinessDraft] = useState<BusinessConfig | null>(
+    null
+  );
 
   // در شروع برنامه: تاریخچه، شماره فاکتور و پارامترهای کاربر بازیابی می‌شود
   // اما مقادیر فرم همیشه خالی است (پس از خروج از برنامه، مقادیر قبلی نباید برگردند)
@@ -64,6 +78,7 @@ export default function Home() {
       setInvoices(loadInvoices());
       setInvoiceNumber(nextInvoiceNumber());
       setRates(loadRates());
+      setBusiness(loadBusiness());
     });
     return () => {
       cancelled = true;
@@ -134,6 +149,26 @@ export default function Home() {
     toast({
       title: "بازگشت به نرخ‌های پیش‌فرض",
       description: "همهٔ پارامترها به مقادیر اولیهٔ برنامه برگشت.",
+    });
+  };
+
+  // ── اطلاعات کسب‌وکار ──
+  const handleSaveBusiness = (b: BusinessConfig) => {
+    saveBusiness(b);
+    setBusiness(b);
+    setBusinessDraft(null);
+    toast({
+      title: "اطلاعات کسب‌وکار ذخیره شد",
+      description: "فاکتورهای بعدی با اطلاعات جدید صادر می‌شود.",
+    });
+  };
+
+  const handleResetBusiness = () => {
+    setBusiness(resetBusiness());
+    setBusinessDraft(null);
+    toast({
+      title: "بازگشت به اطلاعات پیش‌فرض",
+      description: "اطلاعات کسب‌وکار به مقادیر اولیهٔ برنامه برگشت.",
     });
   };
 
@@ -225,6 +260,7 @@ export default function Home() {
             <InvoiceView
               input={input}
               rates={rates}
+              business={business}
               invoiceNumber={invoiceNumber}
               onInvoiceNumberChange={setInvoiceNumber}
               onPatch={(patch) => setInput((prev) => ({ ...prev, ...patch }))}
@@ -243,13 +279,22 @@ export default function Home() {
           </TabsContent>
 
           <TabsContent value="rates" className="mt-0">
-            <RatesView
-              rates={rates}
-              draft={ratesDraft}
-              onDraftChange={setRatesDraft}
-              onSave={handleSaveRates}
-              onReset={handleResetRates}
-            />
+            <div className="mx-auto max-w-3xl space-y-6">
+              <BusinessView
+                business={business}
+                draft={businessDraft}
+                onDraftChange={setBusinessDraft}
+                onSave={handleSaveBusiness}
+                onReset={handleResetBusiness}
+              />
+              <RatesView
+                rates={rates}
+                draft={ratesDraft}
+                onDraftChange={setRatesDraft}
+                onSave={handleSaveRates}
+                onReset={handleResetRates}
+              />
+            </div>
           </TabsContent>
         </Tabs>
       </main>

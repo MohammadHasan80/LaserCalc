@@ -63,12 +63,14 @@ bun run dev
 │   │   ├── calculator.tsx        # فرم محاسبه + پنل نتایج
 │   │   ├── invoice.tsx           # فاکتور A4 با چاپ
 │   │   ├── history.tsx           # تاریخچه فاکتورها
-│   │   └── rates.tsx             # تب پارامترها — ویرایش نرخ‌ها توسط کاربر
+│   │   ├── rates.tsx             # تب پارامترها — ویرایش نرخ‌ها
+│   │   └── business.tsx          # کارت اطلاعات کسب‌وکار (فاکتور)
 │   ├── lib/
 │   │   ├── pricing.ts            # ⚙️ موتور محاسبات و نرخ‌های پیش‌فرض
 │   │   ├── persian.ts            # اعداد فارسی، عدد به حروف، تاریخ شمسی
 │   │   ├── invoice-store.ts      # ذخیره‌سازی فاکتورها (localStorage)
-│   │   └── rates-store.ts        # ذخیره‌سازی پارامترهای کاربر (localStorage)
+│   │   ├── rates-store.ts        # ذخیره‌سازی پارامترهای کاربر (localStorage)
+│   │   └── business-store.ts     # ذخیره‌سازی اطلاعات کسب‌وکار (localStorage)
 │   └── components/ui/            # کامپوننت‌های shadcn/ui
 ├── public/fonts/                 # فونت وزیرمتن (woff2)
 └── prisma/                       # اسکیمای دیتابیس
@@ -84,6 +86,8 @@ bun run dev
 - **چگالی ورق‌ها** برای محاسبهٔ وزن
 
 نرخ‌های ذخیره‌شده روی همان دستگاه می‌ماند، در همهٔ محاسبات و فاکتورها اعمال می‌شود و با دکمهٔ «بازگردانی پیش‌فرض» می‌توان به مقادیر اولیه برگشت.
+
+از نسخه ۱.۱۲.۰ به بعد، **اطلاعات کسب‌وکار** هم از همان تب قابل ویرایش است: نام کسب‌وکار، کپشن لاتین، شماره تماس، اینستاگرام، وبسایت، آدرس و توضیحات/شرایط فاکتور. هر فیلد را خالی بگذارید تا از فاکتور حذف شود. (ذخیره در `localStorage` با کلید `laser-business`)
 
 برای توسعه‌دهنده‌ها: مقادیر پیش‌فرض در فایل [`src/lib/pricing.ts`](src/lib/pricing.ts) قرار دارد (`CUTTING_RATES`, `SHEET_PRICES`, `DENSITY`, `DEFAULT_PRS_RATE`) و پارامترهای کاربر در `localStorage` با کلید `laser-rates` ذخیره می‌شود.
 
@@ -104,7 +108,7 @@ bun run dev
 
 آخرین نسخه از بخش [Releases](../../releases) قابل دریافت است:
 
-- 🤖 **اندروید (APK)** — `cutting-price-app-v1.11.0.apk` — نصب مستقیم، کاملاً آفلاین، ذخیره PDF فاکتور در Downloads
+- 🤖 **اندروید (APK)** — `cutting-price-app-v1.12.0.apk` — نصب مستقیم، کاملاً آفلاین، ذخیره PDF فاکتور در Downloads
 - 💻 **نسخه وب** — `cutting-price-app-v1.0.0.zip` — اجرا با `npm install && npm run dev`
 
 ### ⚠️ پیام Google Play Protect هنگام نصب — طبیعی است

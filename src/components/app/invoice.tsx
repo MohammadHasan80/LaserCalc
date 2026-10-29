@@ -33,7 +33,10 @@ import {
   Globe,
 } from "lucide-react";
 import { calculate, type CalcInput, type RatesConfig } from "@/lib/pricing";
-import { BUSINESS, INVOICE_TERMS } from "@/lib/business";
+import {
+  DEFAULT_BUSINESS,
+  type BusinessConfig,
+} from "@/lib/business";
 import {
   faMoney,
   faNum,
@@ -45,6 +48,7 @@ import {
 interface Props {
   input: CalcInput;
   rates: RatesConfig;
+  business?: BusinessConfig;
   invoiceNumber: string;
   onInvoiceNumberChange: (v: string) => void;
   onPatch: (patch: Partial<CalcInput>) => void;
@@ -107,6 +111,7 @@ const ORANGE = "#f39c1d";
 export function InvoiceView({
   input,
   rates,
+  business,
   invoiceNumber,
   onInvoiceNumberChange,
   onPatch,
@@ -114,6 +119,7 @@ export function InvoiceView({
   saved,
   onBack,
 }: Props) {
+  const biz = business ?? DEFAULT_BUSINESS;
   const { toast } = useToast();
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
   const [date] = useState(() => new Date());
@@ -337,14 +343,16 @@ export function InvoiceView({
                 فاکتور خدمات برش لیزر
               </p>
               <p className="text-lg font-black leading-8 text-white sm:text-2xl">
-                {BUSINESS.fullName}
+                {biz.fullName}
               </p>
-              <p
-                dir="ltr"
-                className="mt-1 text-right text-[8px] font-semibold tracking-[0.3em] text-slate-400 sm:text-[9px]"
-              >
-                AZARAKHSH TABLO BASTAN CO.
-              </p>
+              {biz.latinCaption && (
+                <p
+                  dir="ltr"
+                  className="mt-1 text-right text-[8px] font-semibold tracking-[0.3em] text-slate-400 sm:text-[9px]"
+                >
+                  {biz.latinCaption}
+                </p>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-x-3 gap-y-1">
               {FEATURES.map(({ icon: Icon, label }) => (
@@ -538,23 +546,27 @@ export function InvoiceView({
               </div>
             </div>
 
-            {/* توضیحات (چپ) */}
-            <div className="rounded-lg border border-slate-200 p-3">
-              <div className="mb-2 flex items-center gap-1.5">
-                <ClipboardList className="size-4 text-[#f39c1d]" />
-                <span className="text-sm font-bold text-[#e07f0e]">
-                  توضیحات:
-                </span>
+            {/* توضیحات (چپ) — در نبودِ شرط‌ها نمایش داده نمی‌شود */}
+            {biz.terms.length > 0 ? (
+              <div className="rounded-lg border border-slate-200 p-3">
+                <div className="mb-2 flex items-center gap-1.5">
+                  <ClipboardList className="size-4 text-[#f39c1d]" />
+                  <span className="text-sm font-bold text-[#e07f0e]">
+                    توضیحات:
+                  </span>
+                </div>
+                <ul className="space-y-1.5 text-[10px] leading-4 text-slate-600 sm:text-[11px] sm:leading-5">
+                  {biz.terms.map((t) => (
+                    <li key={t} className="flex items-start gap-1.5">
+                      <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#f39c1d]" />
+                      <span>{t}</span>
+                    </li>
+                  ))}
+                </ul>
               </div>
-              <ul className="space-y-1.5 text-[10px] leading-4 text-slate-600 sm:text-[11px] sm:leading-5">
-                {INVOICE_TERMS.map((t) => (
-                  <li key={t} className="flex items-start gap-1.5">
-                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#f39c1d]" />
-                    <span>{t}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
+            ) : (
+              <div />
+            )}
           </div>
 
           {/* ── امضاها ── */}
@@ -573,23 +585,31 @@ export function InvoiceView({
 
         {/* ── فوتر سرمه‌ای ── */}
         <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[3px] border-[#f39c1d] bg-[#13233a] px-4 py-3 text-[11px] text-slate-200 sm:px-6 sm:text-xs">
-          <span className="flex items-center gap-1.5">
-            <MapPin className="size-3.5 shrink-0 text-[#f6a21e]" />
-            {BUSINESS.address}
-          </span>
-          <span className="flex items-center gap-1.5 tabular-nums">
-            <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
-            {/* شماره تلفن باید عیناً بدون ممیز و بدون تبدیل نمایش داده شود */}
-            <span dir="ltr">{BUSINESS.phone}</span>
-          </span>
-          <span className="flex items-center gap-1.5">
-            <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
-            <span dir="ltr">@{BUSINESS.instagram}</span>
-          </span>
-          <span className="flex items-center gap-1.5" dir="ltr">
-            <Globe className="size-3.5 shrink-0 text-[#f6a21e]" />
-            <span>{BUSINESS.website}</span>
-          </span>
+          {biz.address && (
+            <span className="flex items-center gap-1.5">
+              <MapPin className="size-3.5 shrink-0 text-[#f6a21e]" />
+              {biz.address}
+            </span>
+          )}
+          {biz.phone && (
+            <span className="flex items-center gap-1.5 tabular-nums">
+              <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
+              {/* شماره تلفن باید عیناً بدون ممیز و بدون تبدیل نمایش داده شود */}
+              <span dir="ltr">{biz.phone}</span>
+            </span>
+          )}
+          {biz.instagram && (
+            <span className="flex items-center gap-1.5">
+              <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
+              <span dir="ltr">@{biz.instagram}</span>
+            </span>
+          )}
+          {biz.website && (
+            <span className="flex items-center gap-1.5" dir="ltr">
+              <Globe className="size-3.5 shrink-0 text-[#f6a21e]" />
+              <span>{biz.website}</span>
+            </span>
+          )}
         </div>
       </div>
     </div>
