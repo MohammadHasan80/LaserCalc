@@ -339,6 +339,13 @@ export function InvoiceView({
           {/* عنوان و ویژگی‌ها — سمت چپ */}
           <div className="absolute inset-y-0 left-0 z-10 flex w-[42%] flex-col justify-center gap-2.5 p-4 sm:p-5">
             <div>
+              {biz.logo && (
+                <img
+                  src={biz.logo}
+                  alt=""
+                  className="mb-2 size-10 rounded-lg bg-white/95 object-contain p-0.5 sm:size-12"
+                />
+              )}
               <p className="text-base font-black leading-7 text-[#f6a21e] sm:text-lg">
                 فاکتور خدمات برش لیزر
               </p>

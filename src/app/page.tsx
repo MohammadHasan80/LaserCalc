@@ -18,6 +18,9 @@ import { InvoiceView } from "@/components/app/invoice";
 import { HistoryView } from "@/components/app/history";
 import { RatesView } from "@/components/app/rates";
 import { BusinessView } from "@/components/app/business";
+import { BackupCard } from "@/components/app/backup-card";
+import { LockCard } from "@/components/app/lock-card";
+import { LockScreen } from "@/components/app/lock-screen";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import {
   emptyInput,
@@ -40,6 +43,15 @@ import {
   DEFAULT_BUSINESS,
   type BusinessConfig,
 } from "@/lib/business";
+import { uniqueCustomers } from "@/lib/customers";
+import {
+  isUnlocked,
+  loadLock,
+  markUnlocked,
+  removeLock,
+  saveLock,
+  type LockConfig,
+} from "@/lib/lock";
 import {
   buildSavedInvoice,
   bumpInvoiceCounter,
@@ -67,6 +79,8 @@ export default function Home() {
   const [businessDraft, setBusinessDraft] = useState<BusinessConfig | null>(
     null
   );
+  const [lock, setLock] = useState<LockConfig | null>(null);
+  const [locked, setLocked] = useState(false);
 
   // در شروع برنامه: تاریخچه، شماره فاکتور و پارامترهای کاربر بازیابی می‌شود
   // اما مقادیر فرم همیشه خالی است (پس از خروج از برنامه، مقادیر قبلی نباید برگردند)
@@ -79,6 +93,9 @@ export default function Home() {
       setInvoiceNumber(nextInvoiceNumber());
       setRates(loadRates());
       setBusiness(loadBusiness());
+      const l = loadLock();
+      setLock(l);
+      setLocked(l !== null && !isUnlocked());
     });
     return () => {
       cancelled = true;
@@ -86,6 +103,8 @@ export default function Home() {
   }, []);
 
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
+
+  const customers = useMemo(() => uniqueCustomers(invoices), [invoices]);
 
   const goInvoice = () => {
     setSaved(false);
@@ -172,6 +191,35 @@ export default function Home() {
     });
   };
 
+  // ── قفل برنامه ──
+  const handleUnlock = () => {
+    markUnlocked();
+    setLocked(false);
+  };
+
+  const handleSaveLock = (config: LockConfig) => {
+    saveLock(config);
+    setLock(config);
+  };
+
+  const handleRemoveLock = () => {
+    removeLock();
+    setLock(null);
+  };
+
+  // ── بازیابی از پشتیبان — بارگذاری مجدد همهٔ داده‌ها ──
+  const handleImported = () => {
+    setInvoices(loadInvoices());
+    setInvoiceNumber(nextInvoiceNumber());
+    setRates(loadRates());
+    setBusiness(loadBusiness());
+    setBusinessDraft(null);
+    setRatesDraft(null);
+    const l = loadLock();
+    setLock(l);
+    setLocked(l !== null && !isUnlocked());
+  };
+
   return (
     <DirectionProvider dir="rtl">
     <div className="flex min-h-screen flex-col bg-stone-100 dark:bg-stone-950">
@@ -250,6 +298,7 @@ export default function Home() {
             <CalcView
               input={input}
               rates={rates}
+              customers={customers}
               onChange={setInput}
               onGoInvoice={goInvoice}
               onClear={handleClear}
@@ -294,6 +343,12 @@ export default function Home() {
                 onSave={handleSaveRates}
                 onReset={handleResetRates}
               />
+              <BackupCard onImported={handleImported} />
+              <LockCard
+                lock={lock}
+                onSave={handleSaveLock}
+                onRemove={handleRemoveLock}
+              />
             </div>
           </TabsContent>
         </Tabs>
@@ -319,6 +374,15 @@ export default function Home() {
           </a>
         </p>
       </footer>
+
+      {/* صفحهٔ قفل — در شروع هر اجرا اگر قفل فعال باشد */}
+      {locked && lock && (
+        <LockScreen
+          lock={lock}
+          appName="قیمت برش لیزر"
+          onUnlocked={handleUnlock}
+        />
+      )}
     </div>
     </DirectionProvider>
   );

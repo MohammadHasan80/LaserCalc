@@ -16,6 +16,8 @@ import android.provider.MediaStore;
 import android.util.Base64;
 import android.view.View;
 import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
+import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
@@ -44,6 +46,7 @@ import java.util.concurrent.Executors;
 public class MainActivity extends Activity {
 
     private static final int REQ_WRITE_STORAGE = 1001;
+    private static final int REQ_FILE_CHOOSER = 1002;
 
     /** پورت ثابت وب‌سرور — پایداری origin برای localStorage (تم، فاکتورها، تنظیمات) */
     private static final int FIXED_PORT = 18080;
@@ -56,6 +59,9 @@ public class MainActivity extends Activity {
     /** فایل در انتظار اجازه دسترسی (اندروید ۹ و پایین‌تر) */
     private byte[] pendingData;
     private String pendingName;
+
+    /** کال‌بک انتخاب فایل (لوگو، فایل پشتیبان) */
+    private ValueCallback<Uri[]> filePathCallback;
 
     @Override
     @SuppressLint("SetJavaScriptEnabled")
@@ -90,6 +96,37 @@ public class MainActivity extends Activity {
         webView.setBackgroundColor(isDarkTheme() ? 0xFF0c0a09 : 0xFFf5f5f4);
         webView.addJavascriptInterface(new PdfBridge(), "AndroidBridge");
 
+        // پشتیبانی از انتخاب فایل داخل صفحه (لوگوی فاکتور، فایل پشتیبان)
+        webView.setWebChromeClient(new WebChromeClient() {
+            @Override
+            public boolean onShowFileChooser(WebView view,
+                    ValueCallback<Uri[]> callback,
+                    FileChooserParams params) {
+                if (filePathCallback != null) {
+                    filePathCallback.onReceiveValue(null);
+                }
+                filePathCallback = callback;
+                try {
+                    Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+                    intent.addCategory(Intent.CATEGORY_OPENABLE);
+                    String[] types = params.getAcceptTypes();
+                    String type = "*/*";
+                    if (types != null && types.length > 0
+                            && types[0] != null && !types[0].isEmpty()) {
+                        type = types[0];
+                    }
+                    intent.setType(type);
+                    startActivityForResult(
+                            Intent.createChooser(intent, "انتخاب فایل"),
+                            REQ_FILE_CHOOSER);
+                    return true;
+                } catch (Exception e) {
+                    filePathCallback = null;
+                    return false;
+                }
+            }
+        });
+
         // جلوگیری از انتخاب و کپی متن — لمس طولانی مصرف می‌شود و منویی باز نمی‌کند
         webView.setOnLongClickListener(new View.OnLongClickListener() {
             @Override
@@ -106,12 +143,18 @@ public class MainActivity extends Activity {
         }
     }
 
-    /** پل جاوااسکریپت — ذخیره PDF در Downloads و نگهداشت تم برای پس‌زمینه اولیه */
+    /** پل جاوااسکریپت — ذخیره فایل در Downloads و نگهداشت تم برای پس‌زمینه اولیه */
     private class PdfBridge {
 
         @JavascriptInterface
         public String savePdf(String base64, String filename) {
-            return saveFile(base64, filename);
+            return saveFile(base64, filename, "application/pdf");
+        }
+
+        /** فایل پشتیبان JSON — ذخیره در Downloads */
+        @JavascriptInterface
+        public String saveJson(String base64, String filename) {
+            return saveFile(base64, filename, "application/json");
         }
 
         @JavascriptInterface
@@ -137,7 +180,7 @@ public class MainActivity extends Activity {
     }
 
     /** ذخیره بایت‌های base64 در Downloads — خروجی: ok / error / permission */
-    private String saveFile(String base64, String filename) {
+    private String saveFile(String base64, String filename, String mime) {
         if (base64 == null || base64.isEmpty() || filename == null
                 || filename.isEmpty() || filename.contains("/")) {
             return "error";
@@ -151,7 +194,7 @@ public class MainActivity extends Activity {
         if (data.length == 0) return "error";
 
         if (Build.VERSION.SDK_INT >= 29) {
-            return saveViaMediaStore(data, filename);
+            return saveViaMediaStore(data, filename, mime);
         }
         // اندروید ۹ و پایین‌تر — نیاز به اجازه WRITE_EXTERNAL_STORAGE
         if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -167,11 +210,11 @@ public class MainActivity extends Activity {
     }
 
     /** اندروید ۱۰ به بالا — MediaStore Downloads بدون نیاز به اجازه */
-    private String saveViaMediaStore(byte[] data, String filename) {
+    private String saveViaMediaStore(byte[] data, String filename, String mime) {
         try {
             ContentValues cv = new ContentValues();
             cv.put(MediaStore.Downloads.DISPLAY_NAME, uniqueName(filename));
-            cv.put(MediaStore.Downloads.MIME_TYPE, "application/pdf");
+            cv.put(MediaStore.Downloads.MIME_TYPE, mime);
             cv.put(MediaStore.Downloads.IS_PENDING, 1);
             Uri uri = getContentResolver()
                     .insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
@@ -243,6 +286,19 @@ public class MainActivity extends Activity {
                         "در پوشه Downloads ذخیره شد", Toast.LENGTH_LONG).show();
             }
         });
+    }
+
+    @Override
+    protected void onActivityResult(int requestCode, int resultCode,
+            Intent data) {
+        if (requestCode != REQ_FILE_CHOOSER) return;
+        if (filePathCallback == null) return;
+        Uri[] results = null;
+        if (resultCode == RESULT_OK && data != null && data.getData() != null) {
+            results = new Uri[]{data.getData()};
+        }
+        filePathCallback.onReceiveValue(results);
+        filePathCallback = null;
     }
 
     @Override

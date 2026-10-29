@@ -46,6 +46,11 @@ export function loadBusiness(): BusinessConfig {
     website: str(saved.website, d.website),
     address: str(saved.address, d.address),
     terms,
+    // لوگو: فقط dataURL تصویر معتبر حفظ می‌شود
+    ...(typeof saved.logo === "string" &&
+    saved.logo.startsWith("data:image/")
+      ? { logo: saved.logo }
+      : {}),
   };
 }
 

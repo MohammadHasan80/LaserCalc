@@ -23,6 +23,7 @@ import {
 import { History, Trash2, Eye, FileX2 } from "lucide-react";
 import type { SavedInvoice } from "@/lib/invoice-store";
 import { faMoney } from "@/lib/persian";
+import { SalesReport } from "@/components/app/sales-report";
 
 interface Props {
   invoices: SavedInvoice[];
@@ -33,20 +34,25 @@ interface Props {
 export function HistoryView({ invoices, onView, onDelete }: Props) {
   if (invoices.length === 0) {
     return (
-      <Card className="mx-auto max-w-lg">
-        <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
-          <FileX2 className="size-10 text-muted-foreground/50" />
-          <p className="font-semibold">هنوز فاکتوری ذخیره نشده است</p>
-          <p className="text-sm text-muted-foreground">
-            در تب «فاکتور» پس از کامل کردن مقادیر، دکمه «ذخیره فاکتور» را بزنید
-          </p>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <SalesReport invoices={invoices} />
+        <Card className="mx-auto max-w-lg">
+          <CardContent className="flex flex-col items-center gap-3 py-14 text-center">
+            <FileX2 className="size-10 text-muted-foreground/50" />
+            <p className="font-semibold">هنوز فاکتوری ذخیره نشده است</p>
+            <p className="text-sm text-muted-foreground">
+              در تب «فاکتور» پس از کامل کردن مقادیر، دکمه «ذخیره فاکتور» را بزنید
+            </p>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
 
   return (
-    <Card className="mx-auto max-w-4xl">
+    <div className="space-y-6">
+      <SalesReport invoices={invoices} />
+      <Card className="mx-auto max-w-4xl">
       <CardHeader>
         <CardTitle className="flex items-center gap-2 text-base">
           <History className="size-4 text-amber-600 dark:text-amber-500" />
@@ -121,6 +127,7 @@ export function HistoryView({ invoices, onView, onDelete }: Props) {
           </div>
         ))}
       </CardContent>
-    </Card>
+      </Card>
+    </div>
   );
 }

@@ -121,3 +121,53 @@ export function toEnDigits(s: string): string {
     return String(i >= 0 ? i : ar.indexOf(ch));
   });
 }
+
+// ─── ماه شمسی برای گزارش فروش ────────────────────────────────
+
+const jalaliMonthKeyFmt = new Intl.DateTimeFormat("en-u-ca-persian", {
+  year: "numeric",
+  month: "2-digit",
+});
+
+export const PERSIAN_MONTHS = [
+  "فروردین",
+  "اردیبهشت",
+  "خرداد",
+  "تیر",
+  "مرداد",
+  "شهریور",
+  "مهر",
+  "آبان",
+  "آذر",
+  "دی",
+  "بهمن",
+  "اسفند",
+];
+
+/** سال و ماه شمسی یک تاریخ (عدد لاتین برای محاسبه) */
+export function jalaliYearMonth(date: Date): { y: number; m: number } {
+  try {
+    const kp = jalaliMonthKeyFmt.formatToParts(date);
+    const y = Number(kp.find((p) => p.type === "year")?.value ?? 0);
+    const m = Number(kp.find((p) => p.type === "month")?.value ?? 0);
+    return { y, m };
+  } catch {
+    return { y: 0, m: 1 };
+  }
+}
+
+/** برچسب فارسی ماه شمسی (مثل «آبان ۱۴۰۵») */
+export function jalaliMonthLabel(y: number, m: number): string {
+  const name = PERSIAN_MONTHS[(m - 1 + 12) % 12] ?? "";
+  const yearFa = String(y).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)]);
+  return `${name} ${yearFa}`;
+}
+
+/** کلید ماه شمسی (مثل 1405-08 برای مرتب‌سازی/گروه‌بندی) و برچسب فارسی */
+export function jalaliMonthInfo(date: Date): { key: string; label: string } {
+  const { y, m } = jalaliYearMonth(date);
+  return {
+    key: `${y}-${String(m).padStart(2, "0")}`,
+    label: jalaliMonthLabel(y, m),
+  };
+}

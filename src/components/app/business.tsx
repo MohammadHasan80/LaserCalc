@@ -5,7 +5,7 @@
 // نام، کپشن لاتین، تماس، آدرس و شرایط فاکتور
 // ─────────────────────────────────────────────────────────────
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Card,
   CardContent,
@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Save, RotateCcw, Undo2, Info } from "lucide-react";
+import { Building2, Save, RotateCcw, Undo2, Info, ImageUp, ImageOff, Trash2 } from "lucide-react";
 import type { BusinessConfig } from "@/lib/business";
 
 interface Props {
@@ -38,6 +38,7 @@ export function BusinessView({
 }: Props) {
   const b = draft ?? business;
   const [confirmReset, setConfirmReset] = useState(false);
+  const logoRef = useRef<HTMLInputElement>(null);
 
   // تأیید بازگشت پس از ۴ ثانیه به حالت عادی برمی‌گردد
   useEffect(() => {
@@ -47,6 +48,29 @@ export function BusinessView({
   }, [confirmReset]);
 
   const patch = (p: Partial<BusinessConfig>) => onDraftChange({ ...b, ...p });
+
+  /** انتخاب و کوچک‌سازی لوگو به مربع ۲۵۶×۲۵۶ و ذخیره به‌صورت dataURL */
+  const handleLogoFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const S = 256;
+        const canvas = document.createElement("canvas");
+        canvas.width = S;
+        canvas.height = S;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        const side = Math.min(img.width, img.height);
+        const sx = (img.width - side) / 2;
+        const sy = (img.height - side) / 2;
+        ctx.drawImage(img, sx, sy, side, side, 0, 0, S, S);
+        patch({ logo: canvas.toDataURL("image/png") });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
 
   const dirty = useMemo(
     () => JSON.stringify(b) !== JSON.stringify(business),
@@ -132,6 +156,62 @@ export function BusinessView({
         </div>
       </CardHeader>
       <CardContent className="space-y-4">
+        {/* لوگو */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3 dark:bg-muted/10">
+          <div className="flex items-center gap-3">
+            {b.logo ? (
+              <img
+                src={b.logo}
+                alt="لوگو"
+                className="size-14 rounded-xl border bg-white object-contain p-0.5"
+              />
+            ) : (
+              <div className="flex size-14 items-center justify-center rounded-xl border border-dashed">
+                <ImageOff className="size-5 text-muted-foreground/50" />
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium">لوگوی فاکتور (اختیاری)</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                تصویر مربعی در هدر فاکتور نمایش داده می‌شود — خودکار مربع و کوچک
+                می‌شود
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {b.logo && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => patch({ logo: undefined })}
+              >
+                <Trash2 className="size-4" />
+                حذف
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => logoRef.current?.click()}
+            >
+              <ImageUp className="size-4" />
+              {b.logo ? "تغییر لوگو" : "انتخاب تصویر"}
+            </Button>
+          </div>
+          <input
+            ref={logoRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleLogoFile(f);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
         <div className="grid gap-4 sm:grid-cols-2">
           <div className="space-y-2">
             <Label htmlFor="bizName">نام کامل کسب‌وکار (هدر فاکتور)</Label>

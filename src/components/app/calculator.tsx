@@ -35,6 +35,8 @@ import {
   Tags,
   Eraser,
 } from "lucide-react";
+import { CustomerPicker } from "@/components/app/customer-picker";
+import type { CustomerEntry } from "@/lib/customers";
 import {
   SHEET_TYPES,
   GAS_TYPES,
@@ -51,12 +53,20 @@ import { faMoney, faNum, toEnDigits } from "@/lib/persian";
 interface Props {
   input: CalcInput;
   rates: RatesConfig;
+  customers: CustomerEntry[];
   onChange: (input: CalcInput) => void;
   onGoInvoice: () => void;
   onClear: () => void;
 }
 
-export function Calculator({ input, rates, onChange, onGoInvoice, onClear }: Props) {
+export function Calculator({
+  input,
+  rates,
+  customers,
+  onChange,
+  onGoInvoice,
+  onClear,
+}: Props) {
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
 
   const set = <K extends keyof CalcInput>(key: K, value: CalcInput[K]) =>
@@ -125,11 +135,21 @@ export function Calculator({ input, rates, onChange, onGoInvoice, onClear }: Pro
       <div className="space-y-6 lg:col-span-3">
         {/* اطلاعات مشتری */}
         <Card>
-          <CardHeader className="pb-4">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-4">
             <CardTitle className="flex items-center gap-2 text-base">
               <User className="size-4 text-amber-600 dark:text-amber-500" />
               اطلاعات مشتری
             </CardTitle>
+            <CustomerPicker
+              customers={customers}
+              onPick={(name, phone) =>
+                onChange({
+                  ...input,
+                  customerName: name,
+                  customerPhone: phone,
+                })
+              }
+            />
           </CardHeader>
           <CardContent className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

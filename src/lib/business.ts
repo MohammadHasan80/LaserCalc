@@ -21,6 +21,8 @@ export interface BusinessConfig {
   address: string;
   /** توضیحات و شرایط پایین فاکتور (هر مورد یک رشته) */
   terms: string[];
+  /** لوگوی اختصاصی روی هدر فاکتور — dataURL تصویر مربعی (اختیاری) */
+  logo?: string;
 }
 
 export const BUSINESS = {
