@@ -4,7 +4,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { ThemeProvider } from "@/components/theme-provider";
 
 export const metadata: Metadata = {
-  title: "قیمت برش لیزر | محاسبه و فاکتور",
+  title: "LaserCalc | محاسبه قیمت و فاکتور برش لیزر",
   description:
     "محاسبه‌گر قیمت برش لیزر، پرس و ورق به همراه صدور فاکتور فارسی با چاپ",
   keywords: ["برش لیزر", "فاکتور", "قیمت ورق", "پرس", "محاسبه قیمت"],

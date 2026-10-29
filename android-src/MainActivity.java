@@ -38,7 +38,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 /**
- * اپ قیمت برش لیزر — نسخه اندروید
+ * اپ LaserCalc — نسخه اندروید
  * وب‌اپ به صورت کاملاً آفلاین داخل WebView اجرا می‌شود؛
  * یک وب‌سرور محلی روی 127.0.0.1 دارایی‌های بسته‌بندی‌شده را سرو می‌کند.
  * پل AndroidBridge.savePdf فاکتور را در پوشه Downloads ذخیره می‌کند.

@@ -66,7 +66,7 @@ export function parseBackup(text: string):
   const f = parsed as Partial<BackupFile>;
   if (!f || typeof f !== "object") return { ok: false, error: "ساختار فایل نامعتبر است" };
   if (f.app !== "cutting-price-app")
-    return { ok: false, error: "این فایل پشتیبان «قیمت برش لیزر» نیست" };
+    return { ok: false, error: "این فایل پشتیبان LaserCalc نیست" };
   if (f.schema !== 1)
     return { ok: false, error: "نسخهٔ فایل پشتیبان پشتیبانی نمی‌شود" };
   if (!f.data || typeof f.data !== "object")

@@ -232,7 +232,7 @@ export default function Home() {
             </div>
             <div>
               <h1 className="flex items-center gap-1.5 text-lg font-extrabold">
-                قیمت برش لیزر
+                LaserCalc
                 <Zap className="size-4 text-amber-400" />
               </h1>
               <p className="text-xs text-stone-400">
@@ -357,7 +357,7 @@ export default function Home() {
       {/* فوتر */}
       <footer className="no-print mt-auto border-t bg-stone-900 py-4 text-center text-xs text-stone-400">
         <p>
-          قیمت برش لیزر — نرخ‌ها را می‌توانید خودتان از تب «پارامترها» مطابق
+          LaserCalc — نرخ‌ها را می‌توانید خودتان از تب «پارامترها» مطابق
           نرخ‌های روز تغییر دهید
         </p>
         <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
@@ -379,7 +379,7 @@ export default function Home() {
       {locked && lock && (
         <LockScreen
           lock={lock}
-          appName="قیمت برش لیزر"
+          appName="LaserCalc"
           onUnlocked={handleUnlock}
         />
       )}

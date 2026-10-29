@@ -63,3 +63,6 @@ server.log
 /mini-services
 /tests
 apk-work/
+
+# android build intermediates (built by scripts/build_apk.sh)
+/android-build/
