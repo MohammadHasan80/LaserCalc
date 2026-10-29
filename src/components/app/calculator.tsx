@@ -39,9 +39,9 @@ import {
   SHEET_TYPES,
   GAS_TYPES,
   THICKNESS_OPTIONS,
-  SHEET_PRICES,
   calculate,
   type CalcInput,
+  type RatesConfig,
   type SheetDimRow,
   type SheetType,
   type GasType,
@@ -50,13 +50,14 @@ import { faMoney, faNum, toEnDigits } from "@/lib/persian";
 
 interface Props {
   input: CalcInput;
+  rates: RatesConfig;
   onChange: (input: CalcInput) => void;
   onGoInvoice: () => void;
   onClear: () => void;
 }
 
-export function Calculator({ input, onChange, onGoInvoice, onClear }: Props) {
-  const result = useMemo(() => calculate(input), [input]);
+export function Calculator({ input, rates, onChange, onGoInvoice, onClear }: Props) {
+  const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
 
   const set = <K extends keyof CalcInput>(key: K, value: CalcInput[K]) =>
     onChange({ ...input, [key]: value });
@@ -111,7 +112,7 @@ export function Calculator({ input, onChange, onGoInvoice, onClear }: Props) {
   // نرخ پیش‌فرض جدول برای این نوع/ضخامت — به‌عنوان placeholder نرخ دستی
   const defaultSheetRate =
     input.sheetType && input.thickness !== ""
-      ? SHEET_PRICES[`${input.sheetType}-${Number(input.thickness)}mm`] ?? null
+      ? rates.sheetPrices[`${input.sheetType}-${Number(input.thickness)}mm`] ?? null
       : null;
   const manualRateActive =
     input.sheetPriceManual !== "" && Number(input.sheetPriceManual) > 0;
@@ -315,7 +316,7 @@ export function Calculator({ input, onChange, onGoInvoice, onClear }: Props) {
                   <p className="text-xs text-muted-foreground">
                     {manualRateActive
                       ? "نرخ دستی شما ملاک محاسبه است"
-                      : "خالی بگذارید تا از جدول داخلی نرخ‌ها استفاده شود"}
+                      : "خالی بگذارید تا از نرخ‌های تب پارامترها استفاده شود"}
                   </p>
                 </div>
                 <div className="flex items-center justify-between">

@@ -76,6 +76,29 @@ export const DENSITY: Record<SheetType, number> = {
 /** نرخ پیش‌فرض prs (پرس) */
 export const DEFAULT_PRS_RATE = 5500;
 
+// ───────── پارامترهای قابل ویرایش توسط کاربر ─────────
+// مجموعهٔ کامل نرخ‌هایی که کاربر می‌تواند از تب «پارامترها» تغییر دهد
+export interface RatesConfig {
+  /** نسخهٔ ساختار داده (برای مهاجرت‌های آینده) */
+  version?: number;
+  /** نرخ برش (ریال) به ازای هر متر به ازای هر میلی‌متر ضخامت — کلید: «نوع ورق-نوع گاز» */
+  cuttingRates: Record<string, number>;
+  /** نرخ ورق (ریال بر کیلوگرم) — کلید: «نوع ورق-ضخامتmm» */
+  sheetPrices: Record<string, number>;
+  /** چگالی ورق‌ها (g/cm³) — برای محاسبهٔ وزن */
+  densities: Record<SheetType, number>;
+  /** نرخ پیش‌فرض prs (پرس) — ریال */
+  prsRate: number;
+}
+
+/** مقادیر پیش‌فرض پارامترها (مبنای بازگشت) */
+export const DEFAULT_RATES: RatesConfig = {
+  cuttingRates: { ...CUTTING_RATES },
+  sheetPrices: { ...SHEET_PRICES },
+  densities: { ...DENSITY },
+  prsRate: DEFAULT_PRS_RATE,
+};
+
 export interface SheetDimRow {
   id: string;
   lengthCm: number | "";
@@ -99,6 +122,7 @@ export interface CalcInput {
   dims: SheetDimRow[]; // ابعاد ورق‌ها (cm)
   vatPercent: number; // درصد مالیات بر ارزش افزوده (۰ = بدون مالیات)
   discountAmount: number; // تخفیف (ریال)
+  rates?: RatesConfig; // پارامترهای کاربر (اگر نباشد از مقادیر پیش‌فرض استفاده می‌شود)
 }
 
 export interface InvoiceItem {
@@ -153,17 +177,23 @@ export function effectivePrsRate(thickness: number, prsRate: number): number {
 export function sheetWeight(
   dims: SheetDimRow[],
   thickness: number,
-  type: SheetType
+  type: SheetType,
+  densities: Record<SheetType, number> = DENSITY
 ): number {
   const area = dims.reduce((s, d) => {
     const l = num(d.lengthCm);
     const w = num(d.widthCm);
     return s + (l && w ? l * w : 0);
   }, 0);
-  return (area * thickness * DENSITY[type]) / 10_000;
+  return (area * thickness * (densities[type] ?? DENSITY[type])) / 10_000;
 }
 
 export function calculate(input: CalcInput): CalcResult {
+  // پارامترهای مؤثر: تنظیمات کاربر در صورت وجود، وگرنه مقادیر پیش‌فرض
+  const CR = input.rates?.cuttingRates ?? CUTTING_RATES;
+  const SP = input.rates?.sheetPrices ?? SHEET_PRICES;
+  const DN = input.rates?.densities ?? DENSITY;
+
   const thickness = num(input.thickness);
   const cutLen = num(input.cutLengthPerPiece);
   const prsPer = num(input.prsPerPiece);
@@ -175,7 +205,7 @@ export function calculate(input: CalcInput): CalcResult {
   if (!input.sheetType) cuttingRateError = "نوع ورق را انتخاب کنید";
   else if (!input.gasType) cuttingRateError = "نوع گاز را انتخاب کنید";
   else {
-    const r = CUTTING_RATES[`${input.sheetType}-${input.gasType}`];
+    const r = CR[`${input.sheetType}-${input.gasType}`];
     if (r === undefined) cuttingRateError = "ترکیب نامعتبر";
     else cuttingRate = r;
   }
@@ -226,7 +256,7 @@ export function calculate(input: CalcInput): CalcResult {
       sheetWeightError = "نوع ورق را انتخاب کنید";
       sheetTotalError = sheetWeightError;
     } else {
-      sheetWt = sheetWeight(input.dims, thickness, input.sheetType);
+      sheetWt = sheetWeight(input.dims, thickness, input.sheetType, DN);
       const manual = num(input.sheetPriceManual);
       if (manual !== null && manual > 0) {
         // نرخ دستی (فی) ملاک محاسبه است
@@ -234,7 +264,7 @@ export function calculate(input: CalcInput): CalcResult {
         sheetTotal = sheetWt * manual;
       } else {
         const key = `${input.sheetType}-${thickness}mm`;
-        const rate = SHEET_PRICES[key];
+        const rate = SP[key];
         if (rate === undefined) {
           sheetPerKgError = "نرخ برای این ضخامت ثبت نشده — نرخ دستی وارد کنید";
           sheetTotalError = sheetPerKgError;
@@ -355,6 +385,11 @@ export function calculate(input: CalcInput): CalcResult {
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;
+}
+
+/** فرم خالی با نرخ prs پیش‌فرض از پارامترهای کاربر */
+export function emptyInput(rates?: RatesConfig): CalcInput {
+  return { ...EMPTY_INPUT, prsRate: rates?.prsRate ?? DEFAULT_PRS_RATE };
 }
 
 export const EMPTY_INPUT: CalcInput = {

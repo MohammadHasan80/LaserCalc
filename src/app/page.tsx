@@ -5,16 +5,31 @@ import { DirectionProvider } from "@radix-ui/react-direction";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
-import { Zap, Calculator, ReceiptText, History, Banknote } from "lucide-react";
+import {
+  Zap,
+  Calculator,
+  ReceiptText,
+  History,
+  Banknote,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Calculator as CalcView } from "@/components/app/calculator";
 import { InvoiceView } from "@/components/app/invoice";
 import { HistoryView } from "@/components/app/history";
+import { RatesView } from "@/components/app/rates";
 import { ThemeToggle } from "@/components/app/theme-toggle";
 import {
-  EMPTY_INPUT,
+  emptyInput,
   calculate,
+  DEFAULT_RATES,
   type CalcInput,
+  type RatesConfig,
 } from "@/lib/pricing";
+import {
+  loadRates,
+  saveRates,
+  resetRates,
+} from "@/lib/rates-store";
 import {
   buildSavedInvoice,
   bumpInvoiceCounter,
@@ -27,18 +42,20 @@ import {
 } from "@/lib/invoice-store";
 import { todayJalali } from "@/lib/persian";
 
-type Tab = "calc" | "invoice" | "history";
+type Tab = "calc" | "invoice" | "history" | "rates";
 
 export default function Home() {
   const { toast } = useToast();
   const [tab, setTab] = useState<Tab>("calc");
-  const [input, setInput] = useState<CalcInput>(EMPTY_INPUT);
+  const [input, setInput] = useState<CalcInput>(emptyInput());
   const [invoices, setInvoices] = useState<SavedInvoice[]>([]);
   const [invoiceNumber, setInvoiceNumber] = useState("1001");
   const [saved, setSaved] = useState(false);
+  const [rates, setRates] = useState<RatesConfig>(DEFAULT_RATES);
+  const [ratesDraft, setRatesDraft] = useState<RatesConfig | null>(null);
 
-  // در شروع برنامه: تاریخچه و شماره فاکتور بازیابی می‌شود اما مقادیر فرم همیشه خالی است
-  // (پس از خروج از برنامه، مقادیر قبلی نباید برگردند)
+  // در شروع برنامه: تاریخچه، شماره فاکتور و پارامترهای کاربر بازیابی می‌شود
+  // اما مقادیر فرم همیشه خالی است (پس از خروج از برنامه، مقادیر قبلی نباید برگردند)
   useEffect(() => {
     let cancelled = false;
     Promise.resolve().then(() => {
@@ -46,13 +63,14 @@ export default function Home() {
       clearInput();
       setInvoices(loadInvoices());
       setInvoiceNumber(nextInvoiceNumber());
+      setRates(loadRates());
     });
     return () => {
       cancelled = true;
     };
   }, []);
 
-  const result = useMemo(() => calculate(input), [input]);
+  const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
 
   const goInvoice = () => {
     setSaved(false);
@@ -70,7 +88,7 @@ export default function Home() {
     setInvoices(saveInvoice(inv));
     setInvoiceNumber(bumpInvoiceCounter());
     // پس از ذخیره، مقادیر فرم خالی می‌شود و برای فاکتور جدید به ماشین‌حساب برمی‌گردیم
-    setInput({ ...EMPTY_INPUT });
+    setInput(emptyInput(rates));
     setSaved(false);
     setTab("calc");
     toast({
@@ -81,14 +99,14 @@ export default function Home() {
 
   // پاک کردن همهٔ مقادیر فرم و بازگشت به حالت اولیه
   const handleClear = () => {
-    setInput({ ...EMPTY_INPUT });
+    setInput(emptyInput(rates));
     setSaved(false);
     clearInput();
     toast({ title: "مقادیر پاک شد", description: "همه فیلدها به حالت اولیه برگشتند." });
   };
 
   const handleViewSaved = (inv: SavedInvoice) => {
-    setInput({ ...EMPTY_INPUT, ...inv.input });
+    setInput({ ...emptyInput(rates), ...inv.input });
     setInvoiceNumber(inv.number);
     setSaved(true);
     setTab("invoice");
@@ -97,6 +115,26 @@ export default function Home() {
   const handleDelete = (id: string) => {
     setInvoices(deleteInvoice(id));
     toast({ title: "فاکتور حذف شد" });
+  };
+
+  // ── پارامترها (نرخ‌ها) ──
+  const handleSaveRates = (r: RatesConfig) => {
+    saveRates(r);
+    setRates(r);
+    setRatesDraft(null);
+    toast({
+      title: "پارامترها ذخیره شد",
+      description: "نرخ‌های جدید از این پس در همهٔ محاسبات اعمال می‌شود.",
+    });
+  };
+
+  const handleResetRates = () => {
+    setRates(resetRates());
+    setRatesDraft(null);
+    toast({
+      title: "بازگشت به نرخ‌های پیش‌فرض",
+      description: "همهٔ پارامترها به مقادیر اولیهٔ برنامه برگشت.",
+    });
   };
 
   return (
@@ -137,7 +175,7 @@ export default function Home() {
             setTab(v as Tab);
           }}
         >
-          <TabsList className="no-print mb-6 grid h-11 w-full max-w-md grid-cols-3 bg-stone-200/70 p-1 dark:bg-stone-800">
+          <TabsList className="no-print mb-6 grid h-11 w-full max-w-xl grid-cols-4 bg-stone-200/70 p-1 dark:bg-stone-800">
             <TabsTrigger
               value="calc"
               className="gap-1.5 data-[state=active]:bg-white data-[state=active]:text-stone-900 dark:data-[state=active]:bg-stone-950 dark:data-[state=active]:text-white"
@@ -164,11 +202,19 @@ export default function Home() {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger
+              value="rates"
+              className="gap-1.5 data-[state=active]:bg-white data-[state=active]:text-stone-900 dark:data-[state=active]:bg-stone-950 dark:data-[state=active]:text-white"
+            >
+              <SlidersHorizontal className="size-4" />
+              <span className="text-sm">پارامترها</span>
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="calc" className="mt-0">
             <CalcView
               input={input}
+              rates={rates}
               onChange={setInput}
               onGoInvoice={goInvoice}
               onClear={handleClear}
@@ -178,6 +224,7 @@ export default function Home() {
           <TabsContent value="invoice" className="mt-0">
             <InvoiceView
               input={input}
+              rates={rates}
               invoiceNumber={invoiceNumber}
               onInvoiceNumberChange={setInvoiceNumber}
               onPatch={(patch) => setInput((prev) => ({ ...prev, ...patch }))}
@@ -194,14 +241,24 @@ export default function Home() {
               onDelete={handleDelete}
             />
           </TabsContent>
+
+          <TabsContent value="rates" className="mt-0">
+            <RatesView
+              rates={rates}
+              draft={ratesDraft}
+              onDraftChange={setRatesDraft}
+              onSave={handleSaveRates}
+              onReset={handleResetRates}
+            />
+          </TabsContent>
         </Tabs>
       </main>
 
       {/* فوتر */}
       <footer className="no-print mt-auto border-t bg-stone-900 py-4 text-center text-xs text-stone-400">
         <p>
-          قیمت برش لیزر — بر اساس نرخ‌های روز؛ برای تغییر نرخ‌ها با پشتیبانی
-          هماهنگ کنید
+          قیمت برش لیزر — نرخ‌ها را می‌توانید خودتان از تب «پارامترها» مطابق
+          نرخ‌های روز تغییر دهید
         </p>
         <p className="mt-2 flex flex-wrap items-center justify-center gap-x-1.5 gap-y-1">
           <span>گزارش اشکالات و پیشنهادات:</span>

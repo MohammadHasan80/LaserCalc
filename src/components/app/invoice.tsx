@@ -32,7 +32,7 @@ import {
   Instagram,
   Globe,
 } from "lucide-react";
-import { calculate, type CalcInput } from "@/lib/pricing";
+import { calculate, type CalcInput, type RatesConfig } from "@/lib/pricing";
 import { BUSINESS, INVOICE_TERMS } from "@/lib/business";
 import {
   faMoney,
@@ -44,6 +44,7 @@ import {
 
 interface Props {
   input: CalcInput;
+  rates: RatesConfig;
   invoiceNumber: string;
   onInvoiceNumberChange: (v: string) => void;
   onPatch: (patch: Partial<CalcInput>) => void;
@@ -105,6 +106,7 @@ const ORANGE = "#f39c1d";
 
 export function InvoiceView({
   input,
+  rates,
   invoiceNumber,
   onInvoiceNumberChange,
   onPatch,
@@ -113,7 +115,7 @@ export function InvoiceView({
   onBack,
 }: Props) {
   const { toast } = useToast();
-  const result = useMemo(() => calculate(input), [input]);
+  const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
   const [date] = useState(() => new Date());
   const dateStr = todayJalali(date);
   const validStr = todayJalali(new Date(date.getTime() + 7 * 86_400_000));
