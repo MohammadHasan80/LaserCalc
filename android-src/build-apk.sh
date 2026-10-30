@@ -8,8 +8,8 @@
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-VERSION_NAME="1.19.1"
-VERSION_CODE=31
+VERSION_NAME="1.19.2"
+VERSION_CODE=32
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AT="${ANDROID_TOOLS:-/home/z/my-project/android-tools}"
@@ -28,7 +28,7 @@ KS="${KEYSTORE:-$KS_DIR/release.keystore}"
 RES=$ROOT/android-build/res
 BUILD=$ROOT/android-build
 OUT_DIR="${OUT_DIR:-/home/z/my-project/download}"
-OUT_APK=$OUT_DIR/cutting-price-app-v$VERSION_NAME.apk
+OUT_APK=$OUT_DIR/LaserCalc-v$VERSION_NAME.apk
 
 # ─── آماده‌سازی ابزارها در صورت نبود ───
 mkdir -p "$AT" "$OUT_DIR"
