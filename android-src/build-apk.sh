@@ -8,8 +8,8 @@
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-VERSION_NAME="1.19.3"
-VERSION_CODE=33
+VERSION_NAME="1.0.0"
+VERSION_CODE=1
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AT="${ANDROID_TOOLS:-/home/z/my-project/android-tools}"
@@ -91,7 +91,7 @@ mkdir -p "$BUILD/classes"
 "$JDK/bin/javac" --release 11 \
   -classpath "$PLAT/android.jar" \
   -d "$BUILD/classes" \
-  "$BUILD/gen/com/mohammadhasan/lasercut/R.java" \
+  "$BUILD/gen/com/MohammadHasan/LaserCalc/R.java" \
   android-src/MainActivity.java
 
 echo "═══ [6/8] d8 → classes.dex ═══"

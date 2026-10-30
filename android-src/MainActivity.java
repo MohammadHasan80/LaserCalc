@@ -1,4 +1,4 @@
-package com.mohammadhasan.lasercut;
+package com.MohammadHasan.LaserCalc;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
