@@ -10,10 +10,8 @@ const COUNTER_KEY = "laser-inv-counter";
 const RATES_KEY = "laser-rates";
 const BUSINESS_KEY = "laser-business";
 
-/** شناسهٔ برنامه در فایل پشتیبان (نسخه‌های جدید) */
+/** شناسهٔ برنامه در فایل پشتیبان */
 export const BACKUP_APP_ID = "lasercalc";
-/** شناسه‌های قدیمی که هنگام بازیابی پذیرفته می‌شوند (سازگاری با بکاپ‌های قبل) */
-const LEGACY_APP_IDS = ["cutting-price-app"];
 
 export interface BackupFile {
   app: string;
@@ -70,7 +68,7 @@ export function parseBackup(text: string):
   }
   const f = parsed as Partial<BackupFile>;
   if (!f || typeof f !== "object") return { ok: false, error: "ساختار فایل نامعتبر است" };
-  if (f.app !== BACKUP_APP_ID && !LEGACY_APP_IDS.includes(f.app as string))
+  if (f.app !== BACKUP_APP_ID)
     return { ok: false, error: "این فایل پشتیبان LaserCalc نیست" };
   if (f.schema !== 1)
     return { ok: false, error: "نسخهٔ فایل پشتیبان پشتیبانی نمی‌شود" };
