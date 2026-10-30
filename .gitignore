@@ -66,3 +66,9 @@ apk-work/
 
 # android build intermediates (built by scripts/build_apk.sh)
 /android-build/
+
+# signing material — kept OUTSIDE the repo, never commit
+/android-src/release.keystore
+/android-src/keystore-info.txt
+*.jks
+keystore.env

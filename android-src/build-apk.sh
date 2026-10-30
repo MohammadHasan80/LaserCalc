@@ -17,8 +17,13 @@ BT=$AT/bt/android-14          # build-tools r34
 PLAT=$AT/plat/android-34      # platform android-34
 JDK=$AT/jdk
 
-KS=$ROOT/android-src/release.keystore
-KS_PASS=***REDACTED***
+# مواد امضا (keystore و رمز) عمداً خارج از مخزن نگهداری می‌شوند تا هرگز
+# عمومی نشوند — مسیر پیش‌فرض: پوشهٔ keystore کنار مخزن (قابل تغییر با env)
+KS_DIR="${KEYSTORE_DIR:-$(dirname "$ROOT")/keystore}"
+KS="${KEYSTORE:-$KS_DIR/release.keystore}"
+[ -f "$KS" ] || { echo "خطا: keystore پیدا نشد: $KS" >&2; exit 1; }
+[ -f "$KS_DIR/keystore.env" ] && . "$KS_DIR/keystore.env"
+: "${KS_PASS:?خطا: KS_PASS تنظیم نشده — فایل $KS_DIR/keystore.env را بسازید}"
 
 RES=$ROOT/android-build/res
 BUILD=$ROOT/android-build
