@@ -3,14 +3,19 @@ package com.mohammadhasan.lasercut;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.ContentValues;
+import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.hardware.biometrics.BiometricManager;
+import android.hardware.biometrics.BiometricPrompt;
+import android.hardware.fingerprint.FingerprintManager;
 import android.media.MediaScannerConnection;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.CancellationSignal;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
@@ -63,6 +68,9 @@ public class MainActivity extends Activity {
     /** کال‌بک انتخاب فایل (لوگو، فایل پشتیبان) */
     private ValueCallback<Uri[]> filePathCallback;
 
+    /** سیگنال لغو احراز هویت زیستی در جریان */
+    private CancellationSignal biometricCancel;
+
     @Override
     @SuppressLint("SetJavaScriptEnabled")
     protected void onCreate(Bundle savedInstanceState) {
@@ -95,6 +103,7 @@ public class MainActivity extends Activity {
         });
         webView.setBackgroundColor(isDarkTheme() ? 0xFF0c0a09 : 0xFFf5f5f4);
         webView.addJavascriptInterface(new PdfBridge(), "AndroidBridge");
+        webView.addJavascriptInterface(new BiometricBridge(), "BiometricBridge");
 
         // پشتیبانی از انتخاب فایل داخل صفحه (لوگوی فاکتور، فایل پشتیبان)
         webView.setWebChromeClient(new WebChromeClient() {
@@ -166,6 +175,150 @@ public class MainActivity extends Activity {
                     .putString("theme", theme)
                     .apply();
         }
+    }
+
+    /** پل جاوااسکریپت — ورود با اثر انگشت برای قفل برنامه */
+    private class BiometricBridge {
+
+        /** آیا احراز هویت زیستی در دسترس است؟ — "true" یا "false" */
+        @JavascriptInterface
+        public String canBiometric() {
+            try {
+                if (Build.VERSION.SDK_INT >= 29) {
+                    BiometricManager bm = getSystemService(BiometricManager.class);
+                    if (bm == null) return "false";
+                    return bm.canAuthenticate(
+                            BiometricManager.Authenticators.BIOMETRIC_WEAK)
+                            == BiometricManager.BIOMETRIC_SUCCESS
+                            ? "true" : "false";
+                }
+                if (Build.VERSION.SDK_INT >= 28) {
+                    BiometricManager bm = getSystemService(BiometricManager.class);
+                    if (bm == null) return "false";
+                    return bm.canAuthenticate()
+                            == BiometricManager.BIOMETRIC_SUCCESS
+                            ? "true" : "false";
+                }
+                // اندروید ۷ و ۸ — FingerprintManager
+                FingerprintManager fm = getSystemService(FingerprintManager.class);
+                if (fm == null) return "false";
+                return (fm.isHardwareDetected()
+                        && fm.hasEnrolledFingerprints())
+                        ? "true" : "false";
+            } catch (Exception e) {
+                return "false";
+            }
+        }
+
+        /** شروع احراز هویت — نتیجه با window.__biometricResult برمی‌گردد */
+        @JavascriptInterface
+        public void authenticateBiometric(final String title,
+                final String subtitle) {
+            final String t = (title == null || title.isEmpty())
+                    ? "ورود" : title;
+            final String s = (subtitle == null) ? "" : subtitle;
+            runOnUiThread(new Runnable() {
+                @Override
+                public void run() {
+                    startBiometricAuth(t, s);
+                }
+            });
+        }
+    }
+
+    /** اجرای احراز هویت زیستی — API ۲۸+: BiometricPrompt، پایین‌تر: FingerprintManager */
+    private void startBiometricAuth(String title, String subtitle) {
+        cancelBiometric();
+        final CancellationSignal signal = new CancellationSignal();
+        biometricCancel = signal;
+
+        if (Build.VERSION.SDK_INT >= 28) {
+            BiometricPrompt.Builder builder =
+                    new BiometricPrompt.Builder(this)
+                            .setTitle(title)
+                            .setNegativeButton("انصراف", getMainExecutor(),
+                                    new DialogInterface.OnClickListener() {
+                                        @Override
+                                        public void onClick(DialogInterface d, int w) {
+                                            biometricCancel = null;
+                                            notifyBiometric("cancel");
+                                        }
+                                    });
+            if (!subtitle.isEmpty()) builder.setSubtitle(subtitle);
+            BiometricPrompt prompt = builder.build();
+            prompt.authenticate(signal, getMainExecutor(),
+                    new BiometricPrompt.AuthenticationCallback() {
+                        @Override
+                        public void onAuthenticationSucceeded(
+                                BiometricPrompt.AuthenticationResult result) {
+                            biometricCancel = null;
+                            notifyBiometric("success");
+                        }
+
+                        @Override
+                        public void onAuthenticationError(int code,
+                                CharSequence errString) {
+                            biometricCancel = null;
+                            // ۴ = دکمه منفی، ۵ = لغو کاربر — خطا حساب نمی‌شود
+                            notifyBiometric(code == 4 || code == 5
+                                    ? "cancel" : "error");
+                        }
+                    });
+        } else {
+            try {
+                FingerprintManager fm =
+                        getSystemService(FingerprintManager.class);
+                if (fm == null || !fm.isHardwareDetected()) {
+                    notifyBiometric("error");
+                    return;
+                }
+                fm.authenticate(null, signal, 0,
+                        new FingerprintManager.AuthenticationCallback() {
+                            @Override
+                            public void onAuthenticationSucceeded(
+                                    FingerprintManager.AuthenticationResult result) {
+                                biometricCancel = null;
+                                notifyBiometric("success");
+                            }
+
+                            @Override
+                            public void onAuthenticationError(int code,
+                                    CharSequence errString) {
+                                biometricCancel = null;
+                                notifyBiometric(code == 4 || code == 5
+                                        ? "cancel" : "error");
+                            }
+                        },
+                        new android.os.Handler(
+                                android.os.Looper.getMainLooper()));
+            } catch (Exception e) {
+                biometricCancel = null;
+                notifyBiometric("error");
+            }
+        }
+    }
+
+    private void cancelBiometric() {
+        if (biometricCancel != null) {
+            try {
+                biometricCancel.cancel();
+            } catch (Exception ignored) {
+            }
+            biometricCancel = null;
+        }
+    }
+
+    /** گزارش نتیجه به صفحهٔ وب */
+    private void notifyBiometric(final String status) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                if (webView == null) return;
+                webView.evaluateJavascript(
+                        "window.__biometricResult&&window.__biometricResult('"
+                                + status + "');", null);
+            }
+        });
     }
 
     /** تم فعلی برای رنگ پس‌زمینه WebView — از SharedPreferences، سپس تم سیستم */
@@ -534,6 +687,7 @@ public class MainActivity extends Activity {
 
     @Override
     protected void onDestroy() {
+        cancelBiometric();
         if (webView != null) webView.destroy();
         if (serverSocket != null) {
             try {
