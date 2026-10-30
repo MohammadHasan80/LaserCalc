@@ -4,7 +4,7 @@
 // کارت تنظیم قفل برنامه — فعال‌سازی، تغییر و حذف رمز (۴ تا ۶ رقم)
 // ─────────────────────────────────────────────────────────────
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Card,
   CardContent,
@@ -21,6 +21,7 @@ import {
   RotateCcw,
   Unlock,
   Info,
+  Fingerprint,
 } from "lucide-react";
 import { hashPin, type LockConfig } from "@/lib/lock";
 import { toEnDigits } from "@/lib/persian";
@@ -39,6 +40,17 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
   const [repeat, setRepeat] = useState("");
   const [busy, setBusy] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
+  // وضعیت اثر انگشت: none = خارج از اپ اندروید، on/off = وضعیت دستگاه
+  const [bioState, setBioState] = useState<"none" | "on" | "off">("none");
+
+  useEffect(() => {
+    const w = window as unknown as {
+      BiometricBridge?: { canBiometric?: () => string };
+    };
+    if (!w.BiometricBridge || typeof w.BiometricBridge.canBiometric !== "function")
+      return;
+    setBioState(w.BiometricBridge.canBiometric() === "true" ? "on" : "off");
+  }, []);
 
   const digits = (s: string) => toEnDigits(s).replace(/\D/g, "");
 
@@ -123,8 +135,7 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
           قفل برنامه
         </CardTitle>
         <CardDescription>
-          با فعال‌سازی، هنگام باز کردن برنامه رمز خواسته می‌شود — مناسب وقتی
-          گوشی دست دیگران هم می‌شود
+          با فعال‌سازی، هنگام باز کردن برنامه رمز خواسته می‌شود
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">
@@ -153,6 +164,22 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
             </>
           )}
         </div>
+
+        {/* وضعیت ورود با اثر انگشت — فقط داخل اپ اندروید */}
+        {bioState !== "none" && (
+          <p
+            className={`flex items-center gap-1.5 text-xs ${
+              bioState === "on"
+                ? "text-emerald-700 dark:text-emerald-400"
+                : "text-muted-foreground"
+            }`}
+          >
+            <Fingerprint className="size-3.5 shrink-0" />
+            {bioState === "on"
+              ? "ورود با اثر انگشت روی این دستگاه فعال است — هنگام باز کردن برنامه به‌صورت خودکار پیشنهاد می‌شود"
+              : "اثر انگشت روی این دستگاه در دسترس نیست (سنسور ندارد یا اثری ثبت نشده)"}
+          </p>
+        )}
 
         <div className="grid gap-4 sm:grid-cols-3">
           {lock && (

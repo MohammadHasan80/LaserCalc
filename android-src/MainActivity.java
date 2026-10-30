@@ -246,8 +246,9 @@ public class MainActivity extends Activity {
                                     });
             if (!subtitle.isEmpty()) builder.setSubtitle(subtitle);
             BiometricPrompt prompt = builder.build();
-            prompt.authenticate(signal, getMainExecutor(),
-                    new BiometricPrompt.AuthenticationCallback() {
+            try {
+                prompt.authenticate(signal, getMainExecutor(),
+                        new BiometricPrompt.AuthenticationCallback() {
                         @Override
                         public void onAuthenticationSucceeded(
                                 BiometricPrompt.AuthenticationResult result) {
@@ -264,6 +265,10 @@ public class MainActivity extends Activity {
                                     ? "cancel" : "error");
                         }
                     });
+            } catch (Exception e) {
+                biometricCancel = null;
+                notifyBiometric("error");
+            }
         } else {
             try {
                 FingerprintManager fm =

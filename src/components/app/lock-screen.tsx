@@ -5,7 +5,7 @@
 // کیبورد عددی بزرگ برای ورود راحت با لمس
 // ─────────────────────────────────────────────────────────────
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Banknote, Delete, Fingerprint } from "lucide-react";
 import { verifyPin, type LockConfig } from "@/lib/lock";
@@ -22,8 +22,11 @@ export function LockScreen({ lock, appName, onUnlocked }: Props) {
   const [bioAvailable, setBioAvailable] = useState(false);
   const [bioBusy, setBioBusy] = useState(false);
   const [bioError, setBioError] = useState(false);
+  const autoTried = useRef(false);
 
   // پل اندروید — اثر انگشت فقط داخل اپ اندروید در دسترس است
+  // نکته: handleUnlock به setterهای پایدار وابسته است؛ پس وابستگی [] امن است
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => {
     const w = window as unknown as {
       BiometricBridge?: { canBiometric?: () => string };
@@ -43,7 +46,32 @@ export function LockScreen({ lock, appName, onUnlocked }: Props) {
     return () => {
       delete w.__biometricResult;
     };
-  }, [onUnlocked]);
+  }, []);
+
+  // شروع خودکار احراز هویت با اثر انگشت — فقط یک‌بار در هر نمایش قفل
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (autoTried.current) return;
+    autoTried.current = true;
+    const w = window as unknown as {
+      BiometricBridge?: { canBiometric?: () => string };
+    };
+    if (w.BiometricBridge?.canBiometric?.() !== "true") return;
+    setBioAvailable(true);
+    const t = setTimeout(() => {
+      setBioError(false);
+      setBioBusy(true);
+      (window as unknown as {
+        BiometricBridge?: {
+          authenticateBiometric?: (title: string, subtitle: string) => void;
+        };
+      }).BiometricBridge?.authenticateBiometric(
+        `ورود به ${appName}`,
+        "با اثر انگشت وارد شوید"
+      );
+    }, 350);
+    return () => clearTimeout(t);
+  }, []);
 
   // هر بار که طول رمز به طول موردنظر رسید، بررسی می‌شود
   useEffect(() => {
