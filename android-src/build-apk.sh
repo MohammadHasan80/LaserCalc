@@ -8,8 +8,8 @@
 # ──────────────────────────────────────────────────────────────
 set -euo pipefail
 
-VERSION_NAME="1.19.2"
-VERSION_CODE=32
+VERSION_NAME="1.19.3"
+VERSION_CODE=33
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 AT="${ANDROID_TOOLS:-/home/z/my-project/android-tools}"
