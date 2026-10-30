@@ -17,6 +17,13 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   LockKeyhole,
   ShieldCheck,
   RotateCcw,
@@ -33,6 +40,16 @@ interface Props {
   onSave: (config: LockConfig) => void;
   onRemove: () => void;
 }
+
+/** گزینه‌های «پرسیدن دوبارهٔ رمز» — دقیقه بی‌کاری */
+const TIMEOUT_LABELS: { value: number; label: string }[] = [
+  { value: 0, label: "هر بار باز کردن برنامه" },
+  { value: 1, label: "فقط بعد از ۱ دقیقه بی‌کاری" },
+  { value: 5, label: "فقط بعد از ۵ دقیقه بی‌کاری" },
+  { value: 15, label: "فقط بعد از ۱۵ دقیقه بی‌کاری" },
+  { value: 30, label: "فقط بعد از ۳۰ دقیقه بی‌کاری" },
+  { value: 60, label: "فقط بعد از ۱ ساعت بی‌کاری" },
+];
 
 export function LockCard({ lock, onSave, onRemove }: Props) {
   const { toast } = useToast();
@@ -63,6 +80,21 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
       description: on
         ? "هنگام باز کردن برنامه، دیالوگ اثر انگشت خودکار باز می‌شود."
         : "ورود فقط با رمز عددی انجام می‌شود.",
+    });
+  };
+
+  const changeTimeout = (minutes: number) => {
+    if (!lock || minutes === lock.timeoutMinutes) return;
+    onSave({ ...lock, timeoutMinutes: minutes });
+    toast({
+      title:
+        minutes === 0
+          ? "رمز در هر باز شدن برنامه پرسیده می‌شود"
+          : `رمز فقط بعد از ${TIMEOUT_LABELS.find((o) => o.value === minutes)?.label.replace("فقط ", "")} دوباره پرسیده می‌شود`,
+      description:
+        minutes === 0
+          ? "مثل قبل — یک‌بار در هر اجرای برنامه کافی است."
+          : "اگر کمتر از این مدت بی‌کاری گذشته باشد، بدون رمز وارد می‌شوید.",
     });
   };
 
@@ -97,7 +129,12 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
           return;
         }
       }
-      onSave({ hash: await hashPin(pin), enabled: true, pinLength: pin.length });
+      onSave({
+        hash: await hashPin(pin),
+        enabled: true,
+        pinLength: pin.length,
+        timeoutMinutes: lock?.timeoutMinutes ?? 0,
+      });
       setCurrent("");
       setNext("");
       setRepeat("");
@@ -206,6 +243,34 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
             اثر انگشت روی این دستگاه در دسترس نیست (سنسور ندارد یا اثری ثبت
             نشده)
           </p>
+        )}
+
+        {/* پرسیدن دوبارهٔ رمز — فقط وقتی قفل فعال است */}
+        {lock && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+            <div className="min-w-0">
+              <p className="text-sm font-medium">پرسیدن دوبارهٔ رمز</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                اگر برنامه کمتر از این مدت بی‌کار مانده باشد، رمز دوباره
+                خواسته نمی‌شود
+              </p>
+            </div>
+            <Select
+              value={String(lock.timeoutMinutes)}
+              onValueChange={(v) => changeTimeout(Number(v))}
+            >
+              <SelectTrigger className="w-44 shrink-0">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {TIMEOUT_LABELS.map((o) => (
+                  <SelectItem key={o.value} value={String(o.value)}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
         )}
 
         <div className="grid gap-4 sm:grid-cols-3">

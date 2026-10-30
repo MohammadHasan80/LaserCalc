@@ -50,6 +50,8 @@ import {
   markUnlocked,
   removeLock,
   saveLock,
+  shouldLock,
+  touchLastActive,
   type LockConfig,
 } from "@/lib/lock";
 import {
@@ -95,12 +97,46 @@ export default function Home() {
       setBusiness(loadBusiness());
       const l = loadLock();
       setLock(l);
-      setLocked(l !== null && !isUnlocked());
+      setLocked(l !== null && shouldLock(l));
     });
     return () => {
       cancelled = true;
     };
   }, []);
+
+  // ردیابی فعالیت کاربر و قفل خودکار بعد از بی‌کاری
+  // فقط وقتی قفل فعال است و برنامه باز است؛ وقتی برنامه در پس‌زمینه است
+  // فعالیتی ثبت نمی‌شود، پس مدت حضور در پس‌زمینه هم جزو بی‌کاری حساب می‌شود
+  useEffect(() => {
+    if (!lock || locked) return;
+    const touch = () => touchLastActive();
+    const actEvents = ["pointerdown", "keydown", "touchstart"] as const;
+    actEvents.forEach((e) =>
+      window.addEventListener(e, touch, { passive: true })
+    );
+    const checkLock = () => {
+      const l = loadLock();
+      if (l && shouldLock(l)) {
+        setLocked(true);
+      }
+    };
+    const onVisibility = () => {
+      if (document.visibilityState !== "visible") return;
+      const l = loadLock();
+      if (l && shouldLock(l)) {
+        setLocked(true);
+      } else {
+        touchLastActive(true);
+      }
+    };
+    document.addEventListener("visibilitychange", onVisibility);
+    const iv = setInterval(checkLock, 15000);
+    return () => {
+      actEvents.forEach((e) => window.removeEventListener(e, touch));
+      document.removeEventListener("visibilitychange", onVisibility);
+      clearInterval(iv);
+    };
+  }, [lock, locked]);
 
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
 
@@ -194,6 +230,7 @@ export default function Home() {
   // ── قفل برنامه ──
   const handleUnlock = () => {
     markUnlocked();
+    touchLastActive(true); // شروع دوبارهٔ مهلت بی‌کاری
     setLocked(false);
   };
 
@@ -217,7 +254,7 @@ export default function Home() {
     setRatesDraft(null);
     const l = loadLock();
     setLock(l);
-    setLocked(l !== null && !isUnlocked());
+    setLocked(l !== null && shouldLock(l));
   };
 
   return (
