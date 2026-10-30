@@ -13,6 +13,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import {
@@ -23,7 +24,7 @@ import {
   Info,
   Fingerprint,
 } from "lucide-react";
-import { hashPin, type LockConfig } from "@/lib/lock";
+import { hashPin, loadBioEnabled, saveBioEnabled, type LockConfig } from "@/lib/lock";
 import { toEnDigits } from "@/lib/persian";
 import { useToast } from "@/hooks/use-toast";
 
@@ -42,6 +43,7 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
   const [confirmRemove, setConfirmRemove] = useState(false);
   // وضعیت اثر انگشت: none = خارج از اپ اندروید، on/off = وضعیت دستگاه
   const [bioState, setBioState] = useState<"none" | "on" | "off">("none");
+  const [bioEnabled, setBioEnabled] = useState(true);
 
   useEffect(() => {
     const w = window as unknown as {
@@ -50,7 +52,19 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
     if (!w.BiometricBridge || typeof w.BiometricBridge.canBiometric !== "function")
       return;
     setBioState(w.BiometricBridge.canBiometric() === "true" ? "on" : "off");
+    setBioEnabled(loadBioEnabled());
   }, []);
+
+  const toggleBio = (on: boolean) => {
+    setBioEnabled(on);
+    saveBioEnabled(on);
+    toast({
+      title: on ? "ورود با اثر انگشت روشن شد" : "ورود با اثر انگشت خاموش شد",
+      description: on
+        ? "هنگام باز کردن برنامه، دیالوگ اثر انگشت خودکار باز می‌شود."
+        : "ورود فقط با رمز عددی انجام می‌شود.",
+    });
+  };
 
   const digits = (s: string) => toEnDigits(s).replace(/\D/g, "");
 
@@ -165,19 +179,32 @@ export function LockCard({ lock, onSave, onRemove }: Props) {
           )}
         </div>
 
-        {/* وضعیت ورود با اثر انگشت — فقط داخل اپ اندروید */}
-        {bioState !== "none" && (
-          <p
-            className={`flex items-center gap-1.5 text-xs ${
-              bioState === "on"
-                ? "text-emerald-700 dark:text-emerald-400"
-                : "text-muted-foreground"
-            }`}
-          >
+        {/* ورود با اثر انگشت — فقط داخل اپ اندروید */}
+        {bioState === "on" && (
+          <div className="flex items-center justify-between gap-3 rounded-lg border p-3">
+            <div className="flex items-center gap-2.5">
+              <Fingerprint className="size-5 shrink-0 text-emerald-600 dark:text-emerald-400" />
+              <div>
+                <p className="text-sm font-medium">ورود با اثر انگشت</p>
+                <p className="mt-0.5 text-xs text-muted-foreground">
+                  {bioEnabled
+                    ? "هنگام باز کردن برنامه، دیالوگ اثر انگشت خودکار باز می‌شود"
+                    : "ورود فقط با رمز عددی انجام می‌شود"}
+                </p>
+              </div>
+            </div>
+            <Switch
+              checked={bioEnabled}
+              onCheckedChange={toggleBio}
+              aria-label="ورود با اثر انگشت"
+            />
+          </div>
+        )}
+        {bioState === "off" && (
+          <p className="flex items-center gap-1.5 text-xs text-muted-foreground">
             <Fingerprint className="size-3.5 shrink-0" />
-            {bioState === "on"
-              ? "ورود با اثر انگشت روی این دستگاه فعال است — هنگام باز کردن برنامه به‌صورت خودکار پیشنهاد می‌شود"
-              : "اثر انگشت روی این دستگاه در دسترس نیست (سنسور ندارد یا اثری ثبت نشده)"}
+            اثر انگشت روی این دستگاه در دسترس نیست (سنسور ندارد یا اثری ثبت
+            نشده)
           </p>
         )}
 

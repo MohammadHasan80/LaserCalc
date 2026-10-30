@@ -86,3 +86,29 @@ export async function verifyPin(
   const h = await hashPin(pin);
   return h === config.hash;
 }
+
+// ─────────────────────────────────────────────────────────────
+// ورود با اثر انگشت — پیش‌فرض روشن است؛ کاربر می‌تواند خاموشش کند
+// کلید جدا از قفل نگه داشته می‌شود تا حذف/تغییر رمز روی آن اثر نگذارد
+// ─────────────────────────────────────────────────────────────
+
+const BIO_ENABLED_KEY = "laser-bio-enabled";
+
+/** آیا ورود با اثر انگشت روشن است؟ — بدون کلید یعنی روشن (پیش‌فرض) */
+export function loadBioEnabled(): boolean {
+  if (typeof window === "undefined") return true;
+  try {
+    return localStorage.getItem(BIO_ENABLED_KEY) !== "0";
+  } catch {
+    return true;
+  }
+}
+
+export function saveBioEnabled(on: boolean): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.setItem(BIO_ENABLED_KEY, on ? "1" : "0");
+  } catch {
+    /* بی‌اهمیت */
+  }
+}

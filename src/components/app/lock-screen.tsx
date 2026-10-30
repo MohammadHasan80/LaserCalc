@@ -8,7 +8,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Banknote, Delete, Fingerprint } from "lucide-react";
-import { verifyPin, type LockConfig } from "@/lib/lock";
+import { verifyPin, loadBioEnabled, type LockConfig } from "@/lib/lock";
 
 interface Props {
   lock: LockConfig;
@@ -33,7 +33,9 @@ export function LockScreen({ lock, appName, onUnlocked }: Props) {
       __biometricResult?: (status: string) => void;
     };
     if (w.BiometricBridge && typeof w.BiometricBridge.canBiometric === "function") {
-      setBioAvailable(w.BiometricBridge.canBiometric() === "true");
+      setBioAvailable(
+        w.BiometricBridge.canBiometric() === "true" && loadBioEnabled()
+      );
     }
     w.__biometricResult = (status: string) => {
       setBioBusy(false);
@@ -57,6 +59,7 @@ export function LockScreen({ lock, appName, onUnlocked }: Props) {
       BiometricBridge?: { canBiometric?: () => string };
     };
     if (w.BiometricBridge?.canBiometric?.() !== "true") return;
+    if (!loadBioEnabled()) return; // کاربر خاموشش کرده — فقط رمز
     setBioAvailable(true);
     const t = setTimeout(() => {
       setBioError(false);
