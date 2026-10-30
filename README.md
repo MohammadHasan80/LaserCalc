@@ -125,7 +125,7 @@ bun run dev
 
 آخرین نسخه از بخش [Releases](../../releases) قابل دریافت است:
 
-- 🤖 **اندروید (APK)** — `cutting-price-app-v1.19.0.apk` — نصب مستقیم، کاملاً آفلاین، ذخیره PDF فاکتور در Downloads
+- 🤖 **اندروید (APK)** — `cutting-price-app-v1.19.1.apk` — نصب مستقیم، کاملاً آفلاین، ذخیره PDF فاکتور در Downloads
 
 ### 🎨 آیکون برنامه (v1.14.0)
 

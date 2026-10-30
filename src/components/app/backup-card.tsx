@@ -167,7 +167,7 @@ export function BackupCard({ onImported }: Props) {
                 rows={4}
                 dir="ltr"
                 className="font-mono text-xs"
-                placeholder='{"app":"cutting-price-app","schema":1,...}'
+                placeholder='{"app":"lasercalc","schema":1,...}'
                 value={pasteText}
                 onChange={(e) => setPasteText(e.target.value)}
               />

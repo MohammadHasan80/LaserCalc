@@ -10,8 +10,13 @@ const COUNTER_KEY = "laser-inv-counter";
 const RATES_KEY = "laser-rates";
 const BUSINESS_KEY = "laser-business";
 
+/** شناسهٔ برنامه در فایل پشتیبان (نسخه‌های جدید) */
+export const BACKUP_APP_ID = "lasercalc";
+/** شناسه‌های قدیمی که هنگام بازیابی پذیرفته می‌شوند (سازگاری با بکاپ‌های قبل) */
+const LEGACY_APP_IDS = ["cutting-price-app"];
+
 export interface BackupFile {
-  app: "cutting-price-app";
+  app: string;
   schema: 1;
   exportedAt: string;
   data: {
@@ -33,7 +38,7 @@ export function buildBackup(): BackupFile {
     }
   };
   return {
-    app: "cutting-price-app",
+    app: BACKUP_APP_ID,
     schema: 1,
     exportedAt: new Date().toISOString(),
     data: {
@@ -65,7 +70,7 @@ export function parseBackup(text: string):
   }
   const f = parsed as Partial<BackupFile>;
   if (!f || typeof f !== "object") return { ok: false, error: "ساختار فایل نامعتبر است" };
-  if (f.app !== "cutting-price-app")
+  if (f.app !== BACKUP_APP_ID && !LEGACY_APP_IDS.includes(f.app as string))
     return { ok: false, error: "این فایل پشتیبان LaserCalc نیست" };
   if (f.schema !== 1)
     return { ok: false, error: "نسخهٔ فایل پشتیبان پشتیبانی نمی‌شود" };
@@ -105,7 +110,7 @@ export function applyBackup(file: BackupFile): void {
 export function backupFilename(): string {
   const d = new Date();
   const pad = (n: number) => String(n).padStart(2, "0");
-  return `cutting-price-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+  return `LaserCalc-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
 }
 
 /** ذخیرهٔ فایل پشتیبان — در مرورگر دانلود، در اپ از پل اندروید */
