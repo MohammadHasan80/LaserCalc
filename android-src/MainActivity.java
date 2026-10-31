@@ -2,13 +2,18 @@ package com.MohammadHasan.LaserCalc;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
+import android.app.Dialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
+import android.graphics.Color;
+import android.graphics.Outline;
+import android.graphics.Typeface;
+import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.hardware.biometrics.BiometricManager;
 import android.hardware.biometrics.BiometricPrompt;
 import android.hardware.fingerprint.FingerprintManager;
@@ -20,13 +25,23 @@ import android.os.CancellationSignal;
 import android.os.Environment;
 import android.provider.MediaStore;
 import android.util.Base64;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewOutlineProvider;
+import android.view.ViewGroup;
+import android.view.Window;
+import android.view.WindowManager;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.ByteArrayOutputStream;
@@ -688,16 +703,171 @@ public class MainActivity extends Activity {
             webView.goBack();
             return;
         }
-        // دیالوگ تأیید خروج (درخواست کاربر)
-        AlertDialog dialog = new AlertDialog.Builder(this)
-                .setTitle("خروج از LaserCalc")
-                .setMessage("آیا از خروج مطمئن هستید؟\nداده‌های شما ذخیره می‌ماند و در اجرای بعدی در دسترس خواهند بود.")
-                .setPositiveButton("بله، خروج", (d, w) -> finishAffinity())
-                .setNegativeButton("انصراف", null)
-                .show();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        showExitDialog();
+    }
+
+    // ─── دیالوگ تأیید خروج — کارت گرد هماهنگ با تم برنامه (روشن/تاریک) ───
+
+    private Typeface vazirRegular;
+    private Typeface vazirSemiBold;
+    private Typeface vazirBold;
+
+    /** بارگذاری تنبل وزیرمتن از دارایی‌ها؛ در نبودش فونت سیستم */
+    private Typeface vazir(String file, Typeface fallback) {
+        try {
+            return Typeface.createFromAsset(getAssets(), "fonts/" + file);
+        } catch (Exception e) {
+            return fallback;
         }
+    }
+
+    /** تبدیل dp به پیکسل */
+    private int dp(double v) {
+        return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private void showExitDialog() {
+        boolean dark = isDarkTheme();
+
+        // پالت سنگی — دقیقاً همان متغیرهای تم وب‌اپ
+        int bgCard = dark ? 0xFF1C1917 : 0xFFFFFFFF;  // card
+        int fgMain = dark ? 0xFFE7E5E4 : 0xFF1C1917;  // foreground
+        int fgBody = dark ? 0xFFD6D3D1 : 0xFF44403C;
+        int fgMuted = dark ? 0xFFA8A29E : 0xFF78716C; // muted-foreground
+        int primBg = dark ? 0xFFFAFAF9 : 0xFF1C1917;  // دکمهٔ اصلی
+        int primFg = dark ? 0xFF1C1917 : 0xFFFAFAF9;
+        int secBg = dark ? 0xFF292524 : 0xFFF5F5F4;   // دکمهٔ ثانویه
+        int secFg = dark ? 0xFFE7E5E4 : 0xFF44403C;
+
+        if (vazirRegular == null) {
+            vazirRegular = vazir("Vazirmatn-Regular.ttf", Typeface.DEFAULT);
+            vazirSemiBold = vazir("Vazirmatn-SemiBold.ttf",
+                    Typeface.create("sans-serif-medium", Typeface.NORMAL));
+            vazirBold = vazir("Vazirmatn-Bold.ttf", Typeface.DEFAULT_BOLD);
+        }
+
+        final Dialog dialog = new Dialog(this);
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        // ── کارت گرد ──
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setGravity(Gravity.CENTER_HORIZONTAL);
+        root.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+        root.setPadding(dp(22), dp(28), dp(22), dp(22));
+        GradientDrawable card = new GradientDrawable();
+        card.setColor(bgCard);
+        card.setCornerRadius(dp(26));
+        root.setBackground(card);
+
+        // ── آیکون طلایی برنامه (دایره‌ای) ──
+        ImageView icon = new ImageView(this);
+        icon.setImageResource(R.mipmap.ic_launcher);
+        icon.setClipToOutline(true);
+        icon.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, Outline outline) {
+                outline.setOval(0, 0, view.getWidth(), view.getHeight());
+            }
+        });
+        root.addView(icon, new LinearLayout.LayoutParams(dp(60), dp(60)));
+
+        // ── عنوان ──
+        TextView title = new TextView(this);
+        title.setText("خروج از LaserCalc");
+        title.setTextSize(TypedValue.COMPLEX_UNIT_SP, 18);
+        title.setTypeface(vazirBold);
+        title.setTextColor(fgMain);
+        LinearLayout.LayoutParams titleLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        titleLp.topMargin = dp(16);
+        root.addView(title, titleLp);
+
+        // ── متن پرسش ──
+        TextView body = new TextView(this);
+        body.setText("آیا از خروج مطمئن هستید؟");
+        body.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        body.setTypeface(vazirRegular);
+        body.setTextColor(fgBody);
+        LinearLayout.LayoutParams bodyLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        bodyLp.topMargin = dp(8);
+        root.addView(body, bodyLp);
+
+        // ── یادداشت ذخیرهٔ داده‌ها ──
+        TextView note = new TextView(this);
+        note.setText("داده‌های شما ذخیره می‌ماند و در اجرای بعدی در دسترس خواهند بود.");
+        note.setTextSize(TypedValue.COMPLEX_UNIT_SP, 13);
+        note.setTypeface(vazirRegular);
+        note.setTextColor(fgMuted);
+        note.setGravity(Gravity.CENTER);
+        note.setLineSpacing(dp(3), 1f);
+        LinearLayout.LayoutParams noteLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        noteLp.topMargin = dp(6);
+        root.addView(note, noteLp);
+
+        // ── ردیف دکمه‌ها: انصراف راست، خروج چپ (قرارداد RTL) ──
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
+
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        rowLp.topMargin = dp(22);
+
+        LinearLayout.LayoutParams cancelLp = new LinearLayout.LayoutParams(0, dp(46), 1f);
+        cancelLp.setMargins(dp(5), 0, dp(5), 0);
+        row.addView(dialogButton("انصراف", secBg, secFg, vazirSemiBold,
+                dialog::dismiss), cancelLp);
+
+        LinearLayout.LayoutParams exitLp = new LinearLayout.LayoutParams(0, dp(46), 1f);
+        exitLp.setMargins(dp(5), 0, dp(5), 0);
+        row.addView(dialogButton("خروج", primBg, primFg, vazirSemiBold, () -> {
+            dialog.dismiss();
+            finishAffinity();
+        }), exitLp);
+
+        root.addView(row, rowLp);
+
+        dialog.setContentView(root);
+        dialog.setCanceledOnTouchOutside(true);
+        Window w = dialog.getWindow();
+        if (w != null) {
+            w.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            WindowManager.LayoutParams lp = w.getAttributes();
+            lp.dimAmount = 0.5f;
+            w.addFlags(WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            int width = Math.min(
+                    (int) (getResources().getDisplayMetrics().widthPixels * 0.84f), dp(360));
+            w.setLayout(width, WindowManager.LayoutParams.WRAP_CONTENT);
+        }
+        dialog.show();
+    }
+
+    /** دکمهٔ گرد دیالوگ با بازخورد لمسی */
+    private TextView dialogButton(String text, int bgColor, int fgColor,
+                                  Typeface face, Runnable action) {
+        TextView b = new TextView(this);
+        b.setText(text);
+        b.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15);
+        b.setTypeface(face);
+        b.setTextColor(fgColor);
+        b.setGravity(Gravity.CENTER);
+        GradientDrawable bgBtn = new GradientDrawable();
+        bgBtn.setColor(bgColor);
+        bgBtn.setCornerRadius(dp(14));
+        b.setBackground(bgBtn);
+        b.setOnTouchListener((v, ev) -> {
+            if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                v.setAlpha(0.75f);
+            } else {
+                v.setAlpha(1f);
+            }
+            return false; // کلیک عادی حفظ شود
+        });
+        b.setOnClickListener(v -> action.run());
+        return b;
     }
 
     @Override

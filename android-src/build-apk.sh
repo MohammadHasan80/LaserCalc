@@ -83,6 +83,7 @@ echo "═══ [4/8] aapt2 compile + link ═══"
   --version-name "$VERSION_NAME" \
   --java "$BUILD/gen" \
   -A out \
+  -A android-src/assets \
   --auto-add-overlay \
   "$BUILD/res.zip"
 
