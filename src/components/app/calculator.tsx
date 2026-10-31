@@ -264,6 +264,14 @@ export function Calculator({
                   ))}
                 </div>
               )}
+              {input.thickness !== "" &&
+                Number(input.thickness) > 0 &&
+                Number(input.thickness) < 1 && (
+                  <p className="text-xs leading-5 text-amber-600 dark:text-amber-500">
+                    قیمت برش این ورق بر مبنای ۱mm محاسبه می‌شود؛ وزن ورق با
+                    ضخامت واقعی ({faNum(input.thickness)}mm) حساب می‌شود.
+                  </p>
+                )}
             </div>
 
             <div className="space-y-2">

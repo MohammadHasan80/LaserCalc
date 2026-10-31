@@ -173,6 +173,15 @@ export function effectivePrsRate(thickness: number, prsRate: number): number {
   return thickness <= 2 ? prsRate : (thickness / 2) * prsRate;
 }
 
+/**
+ * ضخامت مبنای قیمت برش: حداقل ۱ میلی‌متر.
+ * برای ورق‌های نازک‌تر از ۱mm قیمت برش بر مبنای همان ۱mm حساب می‌شود،
+ * اما وزن ورق همیشه با ضخامت واقعی ورق محاسبه می‌شود.
+ */
+export function billingThickness(thickness: number): number {
+  return Math.max(thickness, 1);
+}
+
 /** وزن ورق به کیلوگرم: Σ(طول×عرض cm) × ضخامت mm × چگالی ÷ 10000 — طبق فرمول M2 */
 export function sheetWeight(
   dims: SheetDimRow[],
@@ -211,12 +220,15 @@ export function calculate(input: CalcInput): CalcResult {
   }
 
   // ── هزینه برش برای یک قطعه (B11) = متراژ × نرخ × ضخامت ──
+  // ضخامت مبنای برش: ورق زیر ۱mm هم مثل ۱mm قیمت‌گذاری می‌شود
+  const billT =
+    thickness !== null ? billingThickness(thickness) : null;
   let costPerPiece: number | null = null;
   let costPerPieceError: string | null = null;
   if (thickness === null) costPerPieceError = "ضخامت را وارد کنید";
   else if (cutLen === null) costPerPieceError = "متراژ برش را وارد کنید";
   else if (cuttingRate === null) costPerPieceError = "نرخ برش نامعتبر";
-  else costPerPiece = cutLen * cuttingRate * thickness;
+  else costPerPiece = cutLen * cuttingRate * billT!;
 
   // ── هزینه کل برش (B12) = هزینه یک قطعه × تعداد قطعه ──
   let totalCutting: number | null = null;
@@ -300,9 +312,12 @@ export function calculate(input: CalcInput): CalcResult {
   const items: InvoiceItem[] = [];
   let row = 1;
   if (totalMeters && costPerPiece !== null && pieces !== null) {
+    // اگر ورق زیر ۱mm باشد، قیمت بر مبنای ۱mm است — روی فاکتور ذکر می‌شود
+    const minNote =
+      thickness !== null && thickness < 1 ? " (قیمت بر مبنای ۱mm)" : "";
     items.push({
       row: row++,
-      desc: `برش لیزر — گاز ${input.gasType}`,
+      desc: `برش لیزر — گاز ${input.gasType}${minNote}`,
       qty: round2(totalMeters),
       unit: "متر",
       unitPrice: round2(costPerPiece / cutLen!),
