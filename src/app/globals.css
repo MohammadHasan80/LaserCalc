@@ -192,34 +192,50 @@
   }
 }
 
-/* ═══ استایل چاپ فاکتور ═══ */
+/* ═══ برگ اختصاصی A4 فاکتور (پنهان — مبنای خروجی PDF و چاپ تمام‌صفحه) ═══ */
+.invoice-a4-host {
+  position: fixed;
+  top: 0;
+  left: -20000px;
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* ═══ استایل چاپ فاکتور — کل صفحهٔ A4 بدون حاشیه ═══ */
 @media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+  html,
   body {
     background: white !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
   .no-print {
     display: none !important;
   }
-  .print-area {
-    position: absolute !important;
-    inset: 0 !important;
-    margin: 0 !important;
-    padding: 0 !important;
-    width: 100% !important;
-    max-width: none !important;
+  /* همه‌چیز مخفی می‌شود؛ فقط برگ A4 چاپ می‌شود */
+  body > *:not(.invoice-a4-host) {
+    display: none !important;
+  }
+  body > .invoice-a4-host {
+    position: static !important;
+    left: 0 !important;
+    top: 0 !important;
+    z-index: auto !important;
+    pointer-events: auto !important;
+  }
+  .invoice-a4-host #invoice-a4-sheet {
+    width: 210mm !important;
+    min-height: 296.5mm !important;
     box-shadow: none !important;
-    border: none !important;
-    border-radius: 0 !important;
+  }
+  .invoice-a4-host,
+  .invoice-a4-host * {
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
-  }
-  .print-area * {
-    -webkit-print-color-adjust: exact !important;
-    print-color-adjust: exact !important;
-  }
-  @page {
-    size: A4;
-    margin: 10mm;
   }
 }
 
