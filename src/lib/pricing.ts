@@ -337,9 +337,13 @@ export function calculate(input: CalcInput): CalcResult {
     });
   }
   if (!input.sheetFromCustomer && sheetTotal !== null && sheetTotal > 0) {
+    // «ورق روغنی» و «ورق سیاه» خودشان «ورق» دارند — دوبار نوشته نشود
+    const sheetDesc = input.sheetType.startsWith("ورق")
+      ? input.sheetType
+      : `ورق ${input.sheetType}`;
     items.push({
       row: row++,
-      desc: `ورق ${input.sheetType}`,
+      desc: sheetDesc,
       qty: round2(sheetWt ?? 0),
       unit: "کیلو",
       unitPrice: Math.round(sheetPerKg ?? 0),
