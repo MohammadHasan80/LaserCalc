@@ -8,12 +8,12 @@
 
 | | |
 |---|---|
-| **🧮 ماشین‌حساب لحظه‌ای** | **🧾 فاکتور فارسی** |
-| ![ماشین‌حساب](docs/images/shot-calculator.png) | ![فاکتور](docs/images/shot-invoice.png) |
-| **📄 خروجی PDF — دقیقاً A4 و تمام‌صفحه** | **🌙 حالت تاریک** |
-| ![PDF A4](docs/images/shot-pdf-a4.png) | ![حالت تاریک](docs/images/shot-dark.png) |
-| **🗂️ تاریخچهٔ فاکتورها** | **⚙️ پارامترها و پشتیبان‌گیری** |
-| ![تاریخچه](docs/images/shot-history.png) | ![پارامترها](docs/images/shot-parameters.png) |
+| **🧮 ماشین‌حساب لحظه‌ای** | **🌙 حالت تاریک** |
+| ![ماشین‌حساب](docs/images/shot-calculator.png) | ![حالت تاریک](docs/images/shot-dark.png) |
+| **🧾 فاکتور فارسی** | **🗂️ تاریخچه و گزارش فروش** |
+| ![فاکتور](docs/images/shot-invoice.png) | ![تاریخچه](docs/images/shot-history.png) |
+| **⚙️ پارامترها و تنظیمات کسب‌وکار** | **👥 دفترچه مشتریان** |
+| ![پارامترها](docs/images/shot-parameters.png) | ![مشتریان](docs/images/shot-customers.png) |
 
 ## ✨ امکانات
 
