@@ -15,6 +15,14 @@
 | **⚙️ پارامترها و تنظیمات کسب‌وکار** | **👥 دفترچه مشتریان** |
 | ![پارامترها](docs/images/shot-parameters.png) | ![مشتریان](docs/images/shot-customers.png) |
 
+### 📱 نسخهٔ موبایل
+
+<p align="center">
+  <img src="docs/images/shot-m-calculator.png" width="32%" alt="ماشین‌حساب در موبایل">
+  <img src="docs/images/shot-m-invoice.png" width="32%" alt="تنظیمات فاکتور در موبایل">
+  <img src="docs/images/shot-m-history.png" width="32%" alt="تاریخچه و گزارش فروش در موبایل">
+</p>
+
 ## ✨ امکانات
 
 - 🧮 **ماشین‌حساب لحظه‌ای** — با تغییر هر ورودی، نتایج بلافاصله به‌روز می‌شوند
