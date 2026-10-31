@@ -2,6 +2,7 @@ package com.MohammadHasan.LaserCalc;
 
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -685,8 +686,17 @@ public class MainActivity extends Activity {
     public void onBackPressed() {
         if (webView != null && webView.canGoBack()) {
             webView.goBack();
-        } else {
-            super.onBackPressed();
+            return;
+        }
+        // دیالوگ تأیید خروج (درخواست کاربر)
+        AlertDialog dialog = new AlertDialog.Builder(this)
+                .setTitle("خروج از LaserCalc")
+                .setMessage("آیا از خروج مطمئن هستید؟\nداده‌های شما ذخیره می‌ماند و در اجرای بعدی در دسترس خواهند بود.")
+                .setPositiveButton("بله، خروج", (d, w) -> finishAffinity())
+                .setNegativeButton("انصراف", null)
+                .show();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().getDecorView().setLayoutDirection(View.LAYOUT_DIRECTION_RTL);
         }
     }
 
