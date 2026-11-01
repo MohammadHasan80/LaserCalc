@@ -19,6 +19,9 @@ import {
   ArrowRight,
   Download,
   Loader2,
+  Minus,
+  Plus,
+  RotateCcw,
   Crosshair,
   Timer,
   Gem,
@@ -671,6 +674,81 @@ export function InvoiceView({
     ro.observe(el);
     return () => ro.disconnect();
   }, []);
+
+  // ── بزرگ‌نمایی پیش‌نمایش (۱× تا ۴× نسبت به جاشدن در عرض) ──
+  // برای خوانایی فاکتور روی صفحه‌های کوچک؛ خروجی PDF/چاپ تحت تأثیر نیست.
+  const [zoom, setZoomState] = useState(1);
+  const zoomRef = useRef(1);
+  const setZoom = (z: number) => {
+    const v = Math.min(4, Math.max(1, z));
+    zoomRef.current = v;
+    setZoomState(v);
+  };
+  const stepZoom = (d: number) =>
+    setZoom(Math.round((zoomRef.current + d) * 2) / 2);
+  // با تغییر کاغذ (اندازه/جهت) بزرگ‌نمایی به حالت عادی برمی‌گردد
+  useEffect(() => {
+    setZoom(1);
+  }, [paper.size, paper.orientation]);
+
+  // زوم دو-انگشتی (Pinch) روی قاب پیش‌نمایش — شنوندهٔ بومی غیر-گذرا
+  // تا preventDefault کار کند و حرکت بومی مرورگر مزاحم نشود.
+  useEffect(() => {
+    const el = previewWrapRef.current;
+    if (!el) return;
+    const twoDist = (t: TouchList) =>
+      Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+    let start = 0;
+    let startZoom = 1;
+    let pinching = false;
+    const onStart = (e: TouchEvent) => {
+      if (e.touches.length === 2) {
+        pinching = true;
+        start = twoDist(e.touches);
+        startZoom = zoomRef.current;
+        e.preventDefault();
+      }
+    };
+    const onMove = (e: TouchEvent) => {
+      if (!pinching || e.touches.length < 2) return;
+      e.preventDefault();
+      const next = Math.min(
+        4,
+        Math.max(1, startZoom * (twoDist(e.touches) / start))
+      );
+      const prev = zoomRef.current;
+      if (next === prev) return;
+      zoomRef.current = next;
+      setZoomState(next);
+      // ثابت نگه‌داشتن نقطهٔ وسط دو انگشت (قاب RTL — مبدأ از راست)
+      const rect = el.getBoundingClientRect();
+      const mx = (e.touches[0].clientX + e.touches[1].clientX) / 2;
+      const my = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+      const vx = rect.right - mx;
+      const vy = my - rect.top;
+      const dR = Math.abs(el.scrollLeft) + vx;
+      const dT = el.scrollTop + vy;
+      const k = next / prev;
+      requestAnimationFrame(() => {
+        el.scrollLeft = -(Math.max(0, dR * k - vx));
+        el.scrollTop = Math.max(0, dT * k - vy);
+      });
+    };
+    const onEnd = (e: TouchEvent) => {
+      if (pinching && e.touches.length < 2) pinching = false;
+    };
+    el.addEventListener("touchstart", onStart, { passive: false });
+    el.addEventListener("touchmove", onMove, { passive: false });
+    el.addEventListener("touchend", onEnd);
+    el.addEventListener("touchcancel", onEnd);
+    return () => {
+      el.removeEventListener("touchstart", onStart);
+      el.removeEventListener("touchmove", onMove);
+      el.removeEventListener("touchend", onEnd);
+      el.removeEventListener("touchcancel", onEnd);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   // پل اندروید موجود است؟ (در WebView اپ APK چاپ سیستم کار نمی‌کند)
   const [hasBridge, setHasBridge] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -697,7 +775,9 @@ export function InvoiceView({
   const box = { w: page.w * 0.9975, h: page.h * 0.9975 };
   // مقیاس داخلی: جای‌گیری کامل طرح پایه در جعبهٔ صفحه
   const printScale = Math.min(box.w / design.w, box.h / design.h);
-  const previewScale = wrapW > 0 ? Math.min(wrapW / page.w, 1) : 0;
+  // مقیاس جاشدن در عرض (پایهٔ زوم) و مقیاس نهایی پس از بزرگ‌نمایی
+  const fitScale = wrapW > 0 ? Math.min(wrapW / page.w, 1) : 0;
+  const previewScale = fitScale * zoom;
   const pageSizeLabel = `${paper.size.toUpperCase()} ${paper.orientation === "portrait" ? "عمودی" : "افقی"}`;
 
   const handleDownloadPdf = async () => {
@@ -931,23 +1011,74 @@ export function InvoiceView({
         </CardContent>
       </Card>
 
-      {/* ═════ برگ فاکتور — پیش‌نمایش دقیق کاغذ (چاپ از نسخهٔ پنهان انجام می‌شود) ═════ */}
+      {/* ═════ برگ فاکتور — پیش‌نمایش دقیق کاغذ، با بزرگ‌نمایی برای خوانایی ═════ */}
       <div id="invoice-sheet" className="print-area">
-        <div ref={previewWrapRef} className="w-full">
-          {previewScale > 0 && (
-            <PageFrame
-              box={{ w: page.w * previewScale, h: page.h * previewScale }}
-              design={design}
-              scale={previewScale * paperScale(paper)}
-              className="mx-auto rounded-sm shadow-md ring-1 ring-slate-200"
+        {/* نوار کنترل بزرگ‌نمایی — فقط برای نمایش، چاپ نمی‌شود */}
+        <div className="no-print mb-2 flex items-center justify-between gap-3">
+          <span className="text-[11px] text-slate-500">
+            پیش‌نمایش کاغذ — {pageSizeLabel}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              onClick={() => stepZoom(-0.5)}
+              disabled={zoom <= 1}
+              aria-label="کوچک‌نمایی"
             >
-              <InvoiceSheet d={sheetData} landscape={isLandscape} />
-            </PageFrame>
+              <Minus className="size-4" />
+            </Button>
+            <span className="min-w-11 text-center text-xs font-bold tabular-nums text-slate-600">
+              {faNum(Math.round(zoom * 100))}٪
+            </span>
+            <Button
+              variant="outline"
+              size="icon"
+              className="size-8"
+              onClick={() => stepZoom(0.5)}
+              disabled={zoom >= 4}
+              aria-label="بزرگ‌نمایی"
+            >
+              <Plus className="size-4" />
+            </Button>
+            {zoom !== 1 && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="size-8"
+                onClick={() => setZoom(1)}
+                aria-label="اندازهٔ عادی"
+              >
+                <RotateCcw className="size-4" />
+              </Button>
+            )}
+          </div>
+        </div>
+        {fitScale > 0 && fitScale < 0.75 && zoom === 1 && (
+          <p className="no-print mb-2 text-[11px] leading-4 text-amber-600 dark:text-amber-500">
+            برگ برای جا شدن در صفحهٔ گوشی کوچک شده است — برای خواندن متن، با
+            دکمه‌ها یا با دو انگشت بزرگ‌نمایی کنید.
+          </p>
+        )}
+        <div
+          ref={previewWrapRef}
+          className="custom-scroll overflow-auto"
+          style={{ touchAction: "pan-x pan-y" }}
+        >
+          {previewScale > 0 && (
+            <div className="mx-auto w-fit">
+              <PageFrame
+                box={{ w: page.w * previewScale, h: page.h * previewScale }}
+                design={design}
+                scale={previewScale * paperScale(paper)}
+                className="rounded-sm shadow-md ring-1 ring-slate-200"
+              >
+                <InvoiceSheet d={sheetData} landscape={isLandscape} />
+              </PageFrame>
+            </div>
           )}
         </div>
-        <p className="no-print mt-2 text-center text-[11px] text-slate-500">
-          پیش‌نمایش دقیق کاغذ — {pageSizeLabel}
-        </p>
       </div>
 
       {/* ═══ برگ پنهان — قاب دقیق کاغذ انتخابی، مبنای خروجی PDF و چاپ ═══ */}
