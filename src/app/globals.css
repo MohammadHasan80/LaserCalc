@@ -227,11 +227,8 @@
     z-index: auto !important;
     pointer-events: auto !important;
   }
-  .invoice-a4-host #invoice-a4-sheet {
-    width: 210mm !important;
-    min-height: 296.5mm !important;
-    box-shadow: none !important;
-  }
+  /* ابعاد برگ فاکتور با استایل خطی خود عنصر تعیین می‌شود — سازگار با
+     همهٔ اندازه‌ها (A4/A5) و جهت‌ها (عمودی/افقی) طبق تنظیمات کاغذ */
   .invoice-a4-host,
   .invoice-a4-host * {
     -webkit-print-color-adjust: exact !important;

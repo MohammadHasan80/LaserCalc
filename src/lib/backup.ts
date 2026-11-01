@@ -9,6 +9,7 @@ const INVOICES_KEY = "laser-invoices";
 const COUNTER_KEY = "laser-inv-counter";
 const RATES_KEY = "laser-rates";
 const BUSINESS_KEY = "laser-business";
+const PAPER_KEY = "laser-paper";
 
 /** شناسهٔ برنامه در فایل پشتیبان */
 export const BACKUP_APP_ID = "lasercalc";
@@ -22,6 +23,8 @@ export interface BackupFile {
     counter: unknown;
     rates: unknown;
     business: unknown;
+    /** تنظیمات کاغذ فاکتور — در پشتیبان‌های قدیمی نیست (اختیاری) */
+    paper?: unknown;
   };
 }
 
@@ -44,6 +47,7 @@ export function buildBackup(): BackupFile {
       counter: read(COUNTER_KEY),
       rates: read(RATES_KEY),
       business: read(BUSINESS_KEY),
+      paper: read(PAPER_KEY),
     },
   };
 }
@@ -102,6 +106,9 @@ export function applyBackup(file: BackupFile): void {
   write(COUNTER_KEY, file.data.counter);
   write(RATES_KEY, file.data.rates);
   write(BUSINESS_KEY, file.data.business);
+  // تنظیمات کاغذ در پشتیبان‌های قدیمی نیست — فقط اگر هست بازگردانی می‌شود
+  if (file.data.paper !== undefined && file.data.paper !== null)
+    write(PAPER_KEY, file.data.paper);
 }
 
 /** نام فایل پیشنهادی پشتیبان — تاریخ شمسی از تاریخ سیستم */

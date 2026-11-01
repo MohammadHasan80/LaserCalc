@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -23,6 +23,8 @@ import {
   Timer,
   Gem,
   Cog,
+  RectangleVertical,
+  RectangleHorizontal,
   FileText,
   CalendarDays,
   Hourglass,
@@ -45,6 +47,16 @@ import {
   todayJalali,
   toEnDigits,
 } from "@/lib/persian";
+import {
+  DEFAULT_PAPER,
+  PAPER_MM,
+  designOf,
+  loadPaper,
+  pagePx,
+  paperScale,
+  savePaper,
+  type PaperConfig,
+} from "@/lib/paper-store";
 
 interface Props {
   input: CalcInput;
@@ -76,36 +88,40 @@ interface SheetData {
 }
 
 /**
- * ساخت PDF در قالب دقیق A4 (تمام‌صفحه):
- * ۱) نسخهٔ اختصاصی فاکتور با عرض ثابت ۷۹۴px (دقیقاً ۲۱۰ میلی‌متر در ۹۶dpi)
- *    به‌صورت پنهان رندر می‌شود و چون ارتفاعش با min-height روی ۱۱۲۳px
- *    (۲۹۷ میلی‌متر) تنظیم شده، خروجی هم‌نسبتِ کاغذ A4 است.
- * ۲) کانواس خروجی ۱:۱ و بدون هیچ حاشیه‌ای روی صفحهٔ A4 می‌نشیند؛ اگر
+ * ساخت PDF در قالب دقیق کاغذ انتخابی (A4/A5، عمودی/افقی — تمام‌صفحه):
+ * ۱) نسخهٔ اختصاصی فاکتور با طرح پایهٔ ۷۹۴×۱۱۲۳px (A4 عمودی) به‌صورت پنهان
+ *    رندر و با مقیاس یکنواخت در ابعاد کاغذ انتخابی جای می‌گیرد.
+ * ۲) کانواس خروجی ۱:۱ و بدون هیچ حاشیه‌ای روی صفحه می‌نشیند؛ اگر
  *    محتوا از یک صفحه بلندتر شود، به‌صورت تمام‌عرض به صفحه‌های بعدی برش می‌خورد.
  */
-async function buildInvoicePdf(): Promise<{ blob: Blob; dataUrl: string }> {
+async function buildInvoicePdf(
+  paper: PaperConfig
+): Promise<{ blob: Blob; dataUrl: string }> {
   const [{ toCanvas }, { jsPDF }] = await Promise.all([
     import("html-to-image"),
     import("jspdf"),
   ]);
   if (document.fonts?.ready) await document.fonts.ready;
   const node = document.getElementById("invoice-a4-sheet");
-  if (!node) throw new Error("برگ A4 فاکتور پیدا نشد");
+  if (!node) throw new Error("برگ فاکتور پیدا نشد");
   const canvas = await toCanvas(node, {
     pixelRatio: 3,
     backgroundColor: "#ffffff",
   });
+  const mm = PAPER_MM[paper.size];
   const pdf = new jsPDF({
-    orientation: "portrait",
+    orientation: paper.orientation,
     unit: "mm",
-    format: "a4",
+    format: paper.size,
     compress: true,
   });
-  const pageW = 210;
-  const pageH = 297;
-  // ارتفاع هر برشِ صفحه بر حسب پیکسلِ کانواس (هم‌نسبت A4)
+  const pageW = paper.orientation === "portrait" ? mm.w : mm.h;
+  const pageH = paper.orientation === "portrait" ? mm.h : mm.w;
+  // ارتفاع هر برشِ صفحه بر حسب پیکسلِ کانواس (هم‌نسبت کاغذ)؛ تلورانس ۴px بوم
+  // (= حدود ۱px صفحه در pixelRatio ۳) برای حذف صفحه‌های لاشِ نیم‌پیکسلی
   const sliceH = Math.round((canvas.width * pageH) / pageW);
-  const pages = Math.max(1, Math.ceil(canvas.height / sliceH));
+  const pages =
+    canvas.height <= sliceH + 4 ? 1 : Math.ceil(canvas.height / sliceH);
   for (let i = 0; i < pages; i++) {
     const y = i * sliceH;
     const h = Math.min(sliceH, canvas.height - y);
@@ -145,11 +161,117 @@ const NAVY = "#13233a";
 const ORANGE = "#f39c1d";
 
 /**
- * برگ فاکتور — یک ساختار، دو حالت:
- *  - حالت صفحه (پیش‌نمایش واکنش‌گرا در خود برنامه)
- *  - حالت A4 (نسخهٔ ثابت ۷۹۴px برای خروجی PDF و چاپ — تمام‌صفحه)
+ * نقشهٔ کلاس‌های طرح پرتره (عرض ۷۹۴px، A4 عمودی) — پایهٔ هر دو جهت.
+ * نکته: هدر با «flex-row-reverse» ستون عنوان را در جریان عادی نگه می‌دارد تا
+ * ارتفاعش با محتوا (لوگو + نام‌ها) رشد کند — بنر هرگز بریده نمی‌شود.
  */
-function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
+const SHEET_STYLES = {
+  root: "flex min-h-[1123px] w-full flex-col bg-white",
+  header:
+    "relative flex min-h-[190px] shrink-0 flex-row-reverse overflow-hidden bg-[#13233a]",
+  titleWrap:
+    "relative z-10 flex w-[42%] shrink-0 flex-col justify-center gap-2.5 p-5",
+  logo: "mb-2 size-12 rounded-lg bg-white/95 object-contain p-0.5",
+  titleSmall: "text-lg font-black leading-7 text-[#f6a21e]",
+  titleBig: "text-2xl font-black leading-8 text-white",
+  caption:
+    "mt-1 text-right text-[9px] font-semibold tracking-[0.3em] text-slate-400",
+  feature: "flex items-center gap-1 text-[11px] text-slate-200",
+  heroW: "w-[58%]",
+  barLeft: "calc(42% + 8px)",
+  body: "flex flex-1 flex-col p-7",
+  topGrid: "grid grid-cols-2 gap-5",
+  secIcon: "flex size-7 items-center justify-center rounded-md text-[#f6a21e]",
+  secTitle: "text-sm font-bold text-[#13233a]",
+  custTable:
+    "overflow-hidden rounded-lg border border-slate-200 text-[13px]",
+  custRow: "grid grid-cols-[150px_1fr]",
+  custCell:
+    "flex items-center border-l border-slate-200 bg-slate-100 px-2.5 py-2 font-semibold text-[#13233a]",
+  custCellVal: "px-2.5 py-2 text-slate-700",
+  pill: "flex flex-1 items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-[13px]",
+  table:
+    "mt-6 w-full border-collapse overflow-hidden rounded-lg text-xs",
+  cellPadN: "px-1.5 py-2.5",
+  cellPadW: "px-2.5 py-2.5",
+  bottomGrid: "mt-6 grid grid-cols-2 gap-5",
+  summary:
+    "overflow-hidden rounded-lg border border-slate-200 text-[13px]",
+  sumRowFirst: "flex items-center justify-between bg-slate-100 px-3 py-2.5",
+  sumRow: "flex items-center justify-between border-t border-slate-200 px-3 py-2.5",
+  sumTotal: "flex items-center justify-between px-3 py-3 text-sm",
+  sumNote:
+    "border-t border-slate-200 px-3 py-1.5 text-[10px] leading-4 text-slate-500",
+  termsText: "space-y-2 text-[11px] leading-5 text-slate-600",
+  signatures: "mt-auto grid grid-cols-2 gap-5 pt-7",
+  sigBox:
+    "rounded-lg border border-dashed border-slate-300 px-3 pb-7 pt-2 text-center text-[11px] text-slate-500",
+  sigLine: "mt-5 border-t border-dashed border-slate-300",
+  footer:
+    "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[3px] border-[#f39c1d] bg-[#13233a] px-7 py-3.5 text-xs text-slate-200",
+};
+
+/**
+ * بازنویسی‌های طرح افقی (۱۱۲۳×۷۹۴px، A4 افقی):
+ * همان ساختار با چیدمان فشرده‌تر عمودی — ارتفاع بنر و فاصله‌ها کمتر تا
+ * فاکتور در ارتفاع محدودترِ کاغذ افقی جا شود؛ جدول از عرض اضافه استفاده می‌کند.
+ */
+const LANDSCAPE_STYLES: Partial<typeof SHEET_STYLES> = {
+  root: "flex min-h-[794px] w-full flex-col bg-white",
+  header:
+    "relative flex min-h-[128px] shrink-0 flex-row-reverse overflow-hidden bg-[#13233a]",
+  titleWrap:
+    "relative z-10 flex w-[34%] shrink-0 flex-col justify-center gap-1.5 p-4",
+  logo: "mb-1 size-9 rounded-lg bg-white/95 object-contain p-0.5",
+  titleSmall: "text-sm font-black leading-6 text-[#f6a21e]",
+  titleBig: "text-lg font-black leading-7 text-white",
+  caption:
+    "mt-0.5 text-right text-[8px] font-semibold tracking-[0.3em] text-slate-400",
+  feature: "flex items-center gap-1 text-[10px] text-slate-200",
+  heroW: "w-[64%]",
+  barLeft: "calc(34% + 8px)",
+  body: "flex flex-1 flex-col p-4",
+  topGrid: "grid grid-cols-[1.15fr_1fr] gap-4",
+  secIcon: "flex size-6 items-center justify-center rounded-md text-[#f6a21e]",
+  secTitle: "text-[13px] font-bold text-[#13233a]",
+  custTable:
+    "overflow-hidden rounded-lg border border-slate-200 text-[12px]",
+  custRow: "grid grid-cols-[120px_1fr]",
+  custCell:
+    "flex items-center border-l border-slate-200 bg-slate-100 px-2 py-1.5 font-semibold text-[#13233a]",
+  custCellVal: "px-2 py-1.5 text-slate-700",
+  pill: "flex flex-1 items-center justify-between rounded-md bg-slate-100 px-3 py-1.5 text-[12px]",
+  table:
+    "mt-4 w-full border-collapse overflow-hidden rounded-lg text-[11px]",
+  cellPadN: "px-1.5 py-1.5",
+  cellPadW: "px-2 py-1.5",
+  bottomGrid: "mt-4 grid grid-cols-2 gap-4",
+  sumRowFirst: "flex items-center justify-between bg-slate-100 px-3 py-1.5",
+  sumRow: "flex items-center justify-between border-t border-slate-200 px-3 py-1.5",
+  sumTotal: "flex items-center justify-between px-3 py-2 text-sm",
+  sumNote:
+    "border-t border-slate-200 px-3 py-1 text-[9px] leading-4 text-slate-500",
+  termsText: "space-y-1 text-[10px] leading-4 text-slate-600",
+  signatures: "mt-auto grid grid-cols-2 gap-4 pt-4",
+  sigBox:
+    "rounded-lg border border-dashed border-slate-300 px-3 pb-5 pt-1.5 text-center text-[10px] text-slate-500",
+  sigLine: "mt-3 border-t border-dashed border-slate-300",
+  footer:
+    "flex flex-wrap items-center justify-between gap-x-4 gap-y-1.5 border-t-[3px] border-[#f39c1d] bg-[#13233a] px-5 py-2.5 text-[11px] text-slate-200",
+};
+
+/**
+ * برگ فاکتور — طرح ثابت در دو جهت:
+ * پرتره ۷۹۴×۱۱۲۳ و افقی ۱۱۲۳×۷۹۴ (چیدمان عریض اختصاصی)؛ همیشه در PageFrame
+ * با مقیاس یکنواخت در کاغذ انتخابی جای می‌گیرد.
+ */
+function InvoiceSheet({
+  d,
+  landscape = false,
+}: {
+  d: SheetData;
+  landscape?: boolean;
+}) {
   const { biz, result } = d;
   const customerRows: [string, string][] = [
     ["نام شرکت / شخص:", d.customerDisplay],
@@ -161,83 +283,26 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
     { icon: CalendarDays, label: "تاریخ فاکتور:", value: d.dateStr },
     { icon: Hourglass, label: "مهلت اعتبار:", value: d.validStr },
   ];
-  // نقشهٔ کلاس‌ها: هر عنصر در حالت A4 اندازهٔ ثابتِ متناسب با عرض ۷۹۴px دارد
-  // نکته: هدر با «flex-row-reverse» ستون عنوان را در جریان عادی نگه می‌دارد تا
-  // ارتفاعش با محتوا (لوگو + نام‌ها) رشد کند — بنر هرگز بریده نمی‌شود.
-  const s = a4
-    ? {
-        root: "flex min-h-[1123px] w-[794px] flex-col bg-white",
-        header:
-          "relative flex min-h-[190px] shrink-0 flex-row-reverse overflow-hidden bg-[#13233a]",
-        titleWrap:
-          "relative z-10 flex w-[42%] shrink-0 flex-col justify-center gap-2.5 p-5",
-        logo: "mb-2 size-12 rounded-lg bg-white/95 object-contain p-0.5",
-        titleSmall: "text-lg font-black leading-7 text-[#f6a21e]",
-        titleBig: "text-2xl font-black leading-8 text-white",
-        caption:
-          "mt-1 text-right text-[9px] font-semibold tracking-[0.3em] text-slate-400",
-        feature: "flex items-center gap-1 text-[11px] text-slate-200",
-        body: "flex flex-1 flex-col p-7",
-        topGrid: "grid grid-cols-2 gap-5",
-        custTable:
-          "overflow-hidden rounded-lg border border-slate-200 text-[13px]",
-        custRow: "grid grid-cols-[150px_1fr]",
-        pill: "flex flex-1 items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-[13px]",
-        table:
-          "mt-6 w-full border-collapse overflow-hidden rounded-lg text-xs",
-        bottomGrid: "mt-6 grid grid-cols-2 gap-5",
-        summary:
-          "overflow-hidden rounded-lg border border-slate-200 text-[13px]",
-        termsText: "space-y-2 text-[11px] leading-5 text-slate-600",
-        signatures: "mt-auto grid grid-cols-2 gap-5 pt-7",
-        footer:
-          "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[3px] border-[#f39c1d] bg-[#13233a] px-7 py-3.5 text-xs text-slate-200",
-      }
-    : {
-        root: "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
-        header:
-          "relative flex min-h-[128px] flex-row-reverse overflow-hidden bg-[#13233a] sm:min-h-[150px]",
-        titleWrap:
-          "relative z-10 flex w-[42%] shrink-0 flex-col justify-center gap-2.5 p-4 sm:p-5",
-        logo: "mb-2 size-10 rounded-lg bg-white/95 object-contain p-0.5 sm:size-12",
-        titleSmall: "text-base font-black leading-7 text-[#f6a21e] sm:text-lg",
-        titleBig: "text-lg font-black leading-8 text-white sm:text-2xl",
-        caption:
-          "mt-1 text-right text-[8px] font-semibold tracking-[0.3em] text-slate-400 sm:text-[9px]",
-        feature: "flex items-center gap-1 text-[10px] text-slate-200 sm:text-[11px]",
-        body: "p-4 sm:p-6",
-        topGrid: "grid gap-4 sm:grid-cols-2",
-        custTable:
-          "overflow-hidden rounded-lg border border-slate-200 text-xs sm:text-[13px]",
-        custRow: "grid grid-cols-[110px_1fr] sm:grid-cols-[128px_1fr]",
-        pill: "flex flex-1 items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-xs sm:text-[13px]",
-        table:
-          "mt-5 w-full border-collapse overflow-hidden rounded-lg text-[11px] sm:text-xs",
-        bottomGrid: "mt-5 grid gap-4 sm:grid-cols-2",
-        summary:
-          "overflow-hidden rounded-lg border border-slate-200 text-xs sm:text-[13px]",
-        termsText:
-          "space-y-1.5 text-[10px] leading-4 text-slate-600 sm:text-[11px] sm:leading-5",
-        signatures: "mt-6 grid grid-cols-2 gap-4",
-        footer:
-          "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[3px] border-[#f39c1d] bg-[#13233a] px-4 py-3 text-[11px] text-slate-200 sm:px-6 sm:text-xs",
-      };
+  // نقشهٔ کلاس‌ها بر اساس جهت کاغذ (پرتره/افقی)
+  const s = landscape
+    ? { ...SHEET_STYLES, ...LANDSCAPE_STYLES }
+    : SHEET_STYLES;
 
   return (
-    <div id={a4 ? "invoice-a4-sheet" : undefined} className={s.root}>
+    <div className={s.root}>
       {/* ── هدر سرمه‌ای با تصویر برش لیزر ── */}
       <div className={s.header}>
         <img
           src="/images/invoice-hero.png"
           alt=""
-          className="absolute inset-y-0 right-0 h-full w-[58%] object-cover"
+          className={`absolute inset-y-0 right-0 h-full ${s.heroW} object-cover`}
           style={{ clipPath: "polygon(7% 0, 100% 0, 100% 100%, 0% 100%)" }}
         />
         {/* نوار مورب نارنجی روی لبه برش تصویر */}
         <div
           className="absolute inset-y-0 z-[1] w-3.5 bg-gradient-to-b from-[#f6a21e] to-[#dd7d0b]"
           style={{
-            left: "calc(42% + 8px)",
+            left: s.barLeft,
             transform: "skewX(-13.5deg)",
           }}
         />
@@ -276,15 +341,10 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
           {/* مشخصات مشتری (راست) */}
           <div>
             <div className="mb-2 flex items-center gap-2">
-              <span
-                className="flex size-7 items-center justify-center rounded-md text-[#f6a21e]"
-                style={{ backgroundColor: NAVY }}
-              >
+              <span className={s.secIcon} style={{ backgroundColor: NAVY }}>
                 <UserRound className="size-4" />
               </span>
-              <h2 className="text-sm font-bold text-[#13233a]">
-                مشخصات مشتری
-              </h2>
+              <h2 className={s.secTitle}>مشخصات مشتری</h2>
             </div>
             <div className={s.custTable}>
               {customerRows.map(([label, value], i) => (
@@ -294,10 +354,10 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
                     i > 0 ? "border-t border-slate-200" : ""
                   }`}
                 >
-                  <span className="flex items-center border-l border-slate-200 bg-slate-100 px-2.5 py-2 font-semibold text-[#13233a]">
+                  <span className={s.custCell}>
                     {label}
                   </span>
-                  <span className="px-2.5 py-2 text-slate-700">{value}</span>
+                  <span className={s.custCellVal}>{value}</span>
                 </div>
               ))}
             </div>
@@ -331,25 +391,25 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
         <table className={s.table}>
           <thead>
             <tr className="text-white" style={{ backgroundColor: NAVY }}>
-              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+              <th className={`border border-[#1e3450] ${s.cellPadN} text-right font-semibold`}>
                 ردیف
               </th>
-              <th className="border border-[#1e3450] px-2.5 py-2.5 text-right font-semibold">
+              <th className={`border border-[#1e3450] ${s.cellPadW} text-right font-semibold`}>
                 شرح خدمات
               </th>
-              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+              <th className={`border border-[#1e3450] ${s.cellPadN} text-right font-semibold`}>
                 جنس ورق
               </th>
-              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+              <th className={`border border-[#1e3450] ${s.cellPadN} text-right font-semibold`}>
                 ضخامت (mm)
               </th>
-              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+              <th className={`border border-[#1e3450] ${s.cellPadN} text-right font-semibold`}>
                 تعداد
               </th>
-              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+              <th className={`border border-[#1e3450] ${s.cellPadN} text-right font-semibold`}>
                 قیمت واحد (ریال)
               </th>
-              <th className="border border-[#1e3450] px-2.5 py-2.5 text-right font-semibold">
+              <th className={`border border-[#1e3450] ${s.cellPadW} text-right font-semibold`}>
                 مبلغ کل (ریال)
               </th>
             </tr>
@@ -371,25 +431,25 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
                   key={it.row}
                   className={i % 2 === 1 ? "bg-slate-100" : "bg-white"}
                 >
-                  <td className="border border-slate-200 px-1.5 py-2.5 text-right font-semibold tabular-nums text-[#13233a]">
+                  <td className={`border border-slate-200 ${s.cellPadN} text-right font-semibold tabular-nums text-[#13233a]`}>
                     {faNum(it.row)}
                   </td>
-                  <td className="border border-slate-200 px-2.5 py-2.5 text-right font-medium text-slate-800">
+                  <td className={`border border-slate-200 ${s.cellPadW} text-right font-medium text-slate-800`}>
                     {it.desc}
                   </td>
-                  <td className="border border-slate-200 px-1.5 py-2.5 text-right text-slate-600">
+                  <td className={`border border-slate-200 ${s.cellPadN} text-right text-slate-600`}>
                     {it.material ?? "—"}
                   </td>
-                  <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-600">
+                  <td className={`border border-slate-200 ${s.cellPadN} text-right tabular-nums text-slate-600`}>
                     {it.thickness ? faNum(it.thickness) : "—"}
                   </td>
-                  <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-700">
+                  <td className={`border border-slate-200 ${s.cellPadN} text-right tabular-nums text-slate-700`}>
                     {faNum(it.qty)} {it.unit}
                   </td>
-                  <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-700">
+                  <td className={`border border-slate-200 ${s.cellPadN} text-right tabular-nums text-slate-700`}>
                     {faMoney(it.unitPrice)}
                   </td>
-                  <td className="border border-slate-200 px-2.5 py-2.5 text-right font-bold tabular-nums text-slate-900">
+                  <td className={`border border-slate-200 ${s.cellPadW} text-right font-bold tabular-nums text-slate-900`}>
                     {faMoney(it.amount)}
                   </td>
                 </tr>
@@ -402,7 +462,7 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
         <div className={s.bottomGrid}>
           {/* خلاصه مالی (راست) */}
           <div className={s.summary}>
-            <div className="flex items-center justify-between bg-slate-100 px-3 py-2.5">
+            <div className={s.sumRowFirst}>
               <span className="font-semibold text-[#13233a]">
                 جمع کل (ریال)
               </span>
@@ -411,7 +471,7 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
               </span>
             </div>
             {d.discount > 0 && (
-              <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5">
+              <div className={s.sumRow}>
                 <span className="font-semibold text-[#13233a]">تخفیف</span>
                 <span className="font-bold tabular-nums text-rose-600">
                   {faMoney(d.discount)}−
@@ -419,7 +479,7 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
               </div>
             )}
             {d.vatPct > 0 && (
-              <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5">
+              <div className={s.sumRow}>
                 <span className="font-semibold text-[#13233a]">
                   مالیات بر ارزش افزوده ({faNum(d.vatPct)}٪)
                 </span>
@@ -428,10 +488,7 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
                 </span>
               </div>
             )}
-            <div
-              className="flex items-center justify-between px-3 py-3 text-sm"
-              style={{ backgroundColor: ORANGE }}
-            >
+            <div className={s.sumTotal} style={{ backgroundColor: ORANGE }}>
               <span className="font-black text-[#13233a]">
                 مبلغ قابل پرداخت (ریال)
               </span>
@@ -439,7 +496,7 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
                 {faMoney(d.grandTotal)}
               </span>
             </div>
-            <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] leading-4 text-slate-500">
+            <div className={s.sumNote}>
               به حروف: {d.grandTotal > 0 ? moneyToWords(d.grandTotal) : "—"}
             </div>
           </div>
@@ -470,12 +527,9 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
         {/* ── امضاها — در حالت A4 به پایین صفحه چسبیده می‌ماند ── */}
         <div className={s.signatures}>
           {["مهر و امضای فروشنده", "مهر و امضای مشتری"].map((label) => (
-            <div
-              key={label}
-              className="rounded-lg border border-dashed border-slate-300 px-3 pb-7 pt-2 text-center text-[11px] text-slate-500"
-            >
+            <div key={label} className={s.sigBox}>
               {label}
-              <div className="mt-5 border-t border-dashed border-slate-300" />
+              <div className={s.sigLine} />
             </div>
           ))}
         </div>
@@ -513,6 +567,68 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
   );
 }
 
+/**
+ * قاب صفحهٔ کاغذ — جعبهٔ بیرونی دقیقاً به ابعاد صفحهٔ کاغذ (px در ۹۶dpi) است و
+ * طرح پایه با مقیاس یکنواخت داخل آن جای می‌گیرد (مبنای PDF و چاپ).
+ * اگر محتوا بلندتر از یک صفحه شود، جعبه رشد می‌کند و PDF چندصفحه‌ای می‌سازد.
+ */
+function PageFrame({
+  box,
+  design,
+  scale,
+  sheetId,
+  className,
+  children,
+}: {
+  box: { w: number; h: number };
+  design: { w: number; h: number };
+  scale: number;
+  sheetId?: string;
+  className?: string;
+  children: ReactNode;
+}) {
+  const innerRef = useRef<HTMLDivElement>(null);
+  const [contentH, setContentH] = useState(design.h * scale);
+  useEffect(() => {
+    const el = innerRef.current;
+    if (!el) return;
+    const update = () =>
+      setContentH(Math.max(el.getBoundingClientRect().height, box.h));
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [scale, box.h]);
+  return (
+    <div
+      {...(sheetId ? { id: sheetId } : {})}
+      className={className}
+      style={{
+        width: `${Math.round(box.w)}px`,
+        height: `${Math.round(contentH)}px`,
+        overflow: "hidden",
+        position: "relative",
+        background: "#fff",
+      }}
+    >
+      <div
+        ref={innerRef}
+        style={{
+          width: `${design.w}px`,
+          position: "absolute",
+          top: 0,
+          right: 0,
+          transform: `scale(${scale})`,
+          transformOrigin: "top right",
+          background: "#fff",
+        }}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export function InvoiceView({
   input,
   rates,
@@ -531,6 +647,30 @@ export function InvoiceView({
   const dateStr = todayJalali(date);
   const validStr = todayJalali(new Date(date.getTime() + 7 * 86_400_000));
   const [exporting, setExporting] = useState(false);
+  // تنظیمات کاغذ فاکتور (اندازه + جهت) — با ماندگاری در localStorage
+  const [paper, setPaperState] = useState<PaperConfig>(DEFAULT_PAPER);
+  useEffect(() => {
+    setPaperState(loadPaper());
+  }, []);
+  const changePaper = (patch: Partial<PaperConfig>) => {
+    setPaperState((prev) => {
+      const next = { ...prev, ...patch };
+      savePaper(next);
+      return next;
+    });
+  };
+  // اندازهٔ قاب پیش‌نمایش برای مقیاس جاشدن در عرض (پیش‌نمایش مو‌به‌مو کاغذ)
+  const previewWrapRef = useRef<HTMLDivElement>(null);
+  const [wrapW, setWrapW] = useState(0);
+  useEffect(() => {
+    const el = previewWrapRef.current;
+    if (!el) return;
+    const ro = new ResizeObserver((entries) => {
+      for (const e of entries) setWrapW(e.contentRect.width);
+    });
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
   // پل اندروید موجود است؟ (در WebView اپ APK چاپ سیستم کار نمی‌کند)
   const [hasBridge, setHasBridge] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -548,12 +688,24 @@ export function InvoiceView({
   const vatAmount = result.vatAmount;
   const grandTotal = result.grandTotal;
 
+  // هندسهٔ کاغذ انتخابی + طرح پایهٔ متناسب با جهت
+  const page = pagePx(paper);
+  const design = designOf(paper);
+  const isLandscape = paper.orientation === "landscape";
+  // جعبهٔ صفحه برای خروجی PDF/چاپ — حاشیهٔ ایمنی ۰٫۲۵٪ برای جلوگیری از
+  // سرریز نیم‌پیکسلی و صفحهٔ خالی اضافه در چاپ
+  const box = { w: page.w * 0.9975, h: page.h * 0.9975 };
+  // مقیاس داخلی: جای‌گیری کامل طرح پایه در جعبهٔ صفحه
+  const printScale = Math.min(box.w / design.w, box.h / design.h);
+  const previewScale = wrapW > 0 ? Math.min(wrapW / page.w, 1) : 0;
+  const pageSizeLabel = `${paper.size.toUpperCase()} ${paper.orientation === "portrait" ? "عمودی" : "افقی"}`;
+
   const handleDownloadPdf = async () => {
     if (exporting) return;
     setExporting(true);
     const filename = `invoice-${invoiceNumber || "0"}.pdf`;
     try {
-      const { blob, dataUrl } = await buildInvoicePdf();
+      const { blob, dataUrl } = await buildInvoicePdf(paper);
       const bridge = (
         window as unknown as {
           AndroidBridge?: { savePdf?: (b64: string, name: string) => string };
@@ -687,6 +839,59 @@ export function InvoiceView({
               />
             </div>
           </div>
+          {/* ── اندازه و جهت کاغذ فاکتور ── */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>اندازهٔ کاغذ</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={paper.size === "a4" ? "default" : "outline"}
+                  onClick={() => changePaper({ size: "a4" })}
+                  className="h-9"
+                >
+                  <span dir="ltr" className="font-bold">A4</span>
+                  <span className="text-xs opacity-80">۲۱۰×۲۹۷</span>
+                </Button>
+                <Button
+                  type="button"
+                  variant={paper.size === "a5" ? "default" : "outline"}
+                  onClick={() => changePaper({ size: "a5" })}
+                  className="h-9"
+                >
+                  <span dir="ltr" className="font-bold">A5</span>
+                  <span className="text-xs opacity-80">۱۴۸×۲۱۰</span>
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>جهت کاغذ</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={paper.orientation === "portrait" ? "default" : "outline"}
+                  onClick={() => changePaper({ orientation: "portrait" })}
+                  className="h-9"
+                >
+                  <RectangleVertical className="size-4" />
+                  عمودی
+                </Button>
+                <Button
+                  type="button"
+                  variant={paper.orientation === "landscape" ? "default" : "outline"}
+                  onClick={() => changePaper({ orientation: "landscape" })}
+                  className="h-9"
+                >
+                  <RectangleHorizontal className="size-4" />
+                  افقی
+                </Button>
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] leading-4 text-slate-500">
+            خروجی PDF و چاپ دقیقاً با همین اندازه و جهت ساخته می‌شود
+            (حالت فعلی: {pageSizeLabel}).
+          </p>
           <div className="flex flex-wrap gap-2">
             <Button
               variant="outline"
@@ -726,19 +931,47 @@ export function InvoiceView({
         </CardContent>
       </Card>
 
-      {/* ═══════════ برگ فاکتور — پیش‌نمایش (چاپ از نسخهٔ A4 انجام می‌شود) ═══════════ */}
+      {/* ═════ برگ فاکتور — پیش‌نمایش دقیق کاغذ (چاپ از نسخهٔ پنهان انجام می‌شود) ═════ */}
       <div id="invoice-sheet" className="print-area">
-        <InvoiceSheet d={sheetData} />
+        <div ref={previewWrapRef} className="w-full">
+          {previewScale > 0 && (
+            <PageFrame
+              box={{ w: page.w * previewScale, h: page.h * previewScale }}
+              design={design}
+              scale={previewScale * paperScale(paper)}
+              className="mx-auto rounded-sm shadow-md ring-1 ring-slate-200"
+            >
+              <InvoiceSheet d={sheetData} landscape={isLandscape} />
+            </PageFrame>
+          )}
+        </div>
+        <p className="no-print mt-2 text-center text-[11px] text-slate-500">
+          پیش‌نمایش دقیق کاغذ — {pageSizeLabel}
+        </p>
       </div>
 
-      {/* ═══════ برگ اختصاصی A4 (پنهان) — مبنای خروجی PDF و چاپ تمام‌صفحه ═══════ */}
+      {/* ═══ برگ پنهان — قاب دقیق کاغذ انتخابی، مبنای خروجی PDF و چاپ ═══ */}
       {mounted &&
         createPortal(
           <div className="invoice-a4-host" aria-hidden="true">
-            <InvoiceSheet d={sheetData} a4 />
+            <PageFrame
+              box={box}
+              design={design}
+              scale={printScale}
+              sheetId="invoice-a4-sheet"
+            >
+              <InvoiceSheet d={sheetData} landscape={isLandscape} />
+            </PageFrame>
           </div>,
           document.body
         )}
+
+      {/* اندازهٔ صفحهٔ چاپ مطابق کاغذ انتخابی (A4/A5، عمودی/افقی) */}
+      <style
+        dangerouslySetInnerHTML={{
+          __html: `@media print { @page { size: ${paper.size.toUpperCase()} ${paper.orientation}; margin: 0; } }`,
+        }}
+      />
     </div>
   );
 }
