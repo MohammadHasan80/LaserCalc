@@ -296,7 +296,7 @@ function InvoiceSheet({
       {/* ── هدر سرمه‌ای با تصویر برش لیزر ── */}
       <div className={s.header}>
         <img
-          src="/images/invoice-hero.png"
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/images/invoice-hero.png`}
           alt=""
           className={`absolute inset-y-0 right-0 h-full ${s.heroW} object-cover`}
           style={{ clipPath: "polygon(7% 0, 100% 0, 100% 100%, 0% 100%)" }}

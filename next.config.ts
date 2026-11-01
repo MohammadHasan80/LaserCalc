@@ -4,6 +4,8 @@ const nextConfig: NextConfig = {
   // حالت عادی: standalone (سرور/پیش‌نمایش)
   // حالت APK: EXPORT_MODE=1 → خروجی کاملاً استاتیک برای WebView آفلاین
   output: process.env.EXPORT_MODE === "1" ? "export" : "standalone",
+  // انتشار وب روی GitHub Pages (زیرمسیر /LaserCalc) — فقط با متغیر محیطی
+  basePath: process.env.NEXT_PUBLIC_BASE_PATH || undefined,
   /* config options here */
   typescript: {
     ignoreBuildErrors: true,
