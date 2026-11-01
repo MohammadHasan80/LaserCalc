@@ -162,12 +162,15 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
     { icon: Hourglass, label: "مهلت اعتبار:", value: d.validStr },
   ];
   // نقشهٔ کلاس‌ها: هر عنصر در حالت A4 اندازهٔ ثابتِ متناسب با عرض ۷۹۴px دارد
+  // نکته: هدر با «flex-row-reverse» ستون عنوان را در جریان عادی نگه می‌دارد تا
+  // ارتفاعش با محتوا (لوگو + نام‌ها) رشد کند — بنر هرگز بریده نمی‌شود.
   const s = a4
     ? {
         root: "flex min-h-[1123px] w-[794px] flex-col bg-white",
-        header: "relative h-[150px] shrink-0 overflow-hidden bg-[#13233a]",
+        header:
+          "relative flex min-h-[190px] shrink-0 flex-row-reverse overflow-hidden bg-[#13233a]",
         titleWrap:
-          "absolute inset-y-0 left-0 z-10 flex w-[42%] flex-col justify-center gap-2.5 p-5",
+          "relative z-10 flex w-[42%] shrink-0 flex-col justify-center gap-2.5 p-5",
         logo: "mb-2 size-12 rounded-lg bg-white/95 object-contain p-0.5",
         titleSmall: "text-lg font-black leading-7 text-[#f6a21e]",
         titleBig: "text-2xl font-black leading-8 text-white",
@@ -193,9 +196,9 @@ function InvoiceSheet({ d, a4 = false }: { d: SheetData; a4?: boolean }) {
     : {
         root: "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
         header:
-          "relative min-h-[128px] overflow-hidden bg-[#13233a] sm:min-h-[150px]",
+          "relative flex min-h-[128px] flex-row-reverse overflow-hidden bg-[#13233a] sm:min-h-[150px]",
         titleWrap:
-          "absolute inset-y-0 left-0 z-10 flex w-[42%] flex-col justify-center gap-2.5 p-4 sm:p-5",
+          "relative z-10 flex w-[42%] shrink-0 flex-col justify-center gap-2.5 p-4 sm:p-5",
         logo: "mb-2 size-10 rounded-lg bg-white/95 object-contain p-0.5 sm:size-12",
         titleSmall: "text-base font-black leading-7 text-[#f6a21e] sm:text-lg",
         titleBig: "text-lg font-black leading-8 text-white sm:text-2xl",
