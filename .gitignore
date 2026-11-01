@@ -72,3 +72,6 @@ apk-work/
 /android-src/keystore-info.txt
 *.jks
 keystore.env
+
+# gh-pages export (nested git repo — never commit)
+/pages-export/

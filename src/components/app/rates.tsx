@@ -103,9 +103,7 @@ export function RatesView({
       if (!(v > 0)) names.push(`نرخ برش ${k.replace("-", " ")}`);
     for (const [k, v] of Object.entries(d.sheetPrices))
       if (!(v > 0))
-        names.push(
-          `نرخ ورق ${k.replace(/^ورق /, "").replace("-", " ").replace(/mm$/, "")}`
-        );
+        names.push(`نرخ ورق ${k.replace("-", " ").replace(/mm$/, "")}`);
     for (const [k, v] of Object.entries(d.densities))
       if (!(v > 0)) names.push(`چگالی ${k}`);
     if (!(d.prsRate > 0)) names.push("نرخ prs");

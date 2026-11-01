@@ -1,6 +1,7 @@
 "use client";
 
 import type { CalcInput, InvoiceItem } from "@/lib/pricing";
+import { normalizeSheetType } from "@/lib/pricing";
 import { todayJalali } from "@/lib/persian";
 
 export interface SavedInvoice {
@@ -28,9 +29,21 @@ function safeParse<T>(raw: string | null, fallback: T): T {
   }
 }
 
+/**
+ * مهاجرت فاکتورهای ذخیره‌شدهٔ نسخه‌های قبل: مقدار «ورق روغنی» به «روغنی» تبدیل
+ * می‌شود تا بازبینی و محاسبهٔ مجدد آن‌ها درست کار کند
+ */
+function migrateInvoice(inv: SavedInvoice): SavedInvoice {
+  if (!inv.input) return inv;
+  const t = normalizeSheetType(inv.input.sheetType);
+  if (t === inv.input.sheetType) return inv;
+  return { ...inv, input: { ...inv.input, sheetType: t } };
+}
+
 export function loadInvoices(): SavedInvoice[] {
   if (typeof window === "undefined") return [];
-  return safeParse<SavedInvoice[]>(localStorage.getItem(INVOICES_KEY), []);
+  const list = safeParse<SavedInvoice[]>(localStorage.getItem(INVOICES_KEY), []);
+  return Array.isArray(list) ? list.map(migrateInvoice) : [];
 }
 
 export function saveInvoice(inv: SavedInvoice): SavedInvoice[] {

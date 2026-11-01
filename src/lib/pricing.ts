@@ -3,24 +3,43 @@
 // LaserCalc — pricing engine
 // ─────────────────────────────────────────────────────────────
 
+// نام‌های پایهٔ ورق — بدون کلمهٔ «ورق»؛ این کلمه فقط در شرح فاکتور اضافه می‌شود
 export const SHEET_TYPES = [
-  "ورق روغنی",
-  "ورق سیاه",
+  "روغنی",
+  "سیاه",
   "گالوانیزه",
   "استیل",
   "فنر",
 ] as const;
 export type SheetType = (typeof SHEET_TYPES)[number];
 
+/**
+ * سازگاری با داده‌های قدیمی: مقادیر ذخیره‌شدهٔ نسخه‌های قبل (مثل «ورق روغنی»)
+ * به نام پایه («روغنی») تبدیل می‌شود؛ مقدار نامعتبر → رشتهٔ خالی
+ */
+export function normalizeSheetType(v: unknown): SheetType | "" {
+  if (typeof v !== "string") return "";
+  const s = v.trim();
+  if ((SHEET_TYPES as readonly string[]).includes(s)) return s as SheetType;
+  const bare = s.replace(/^ورق\s+/, "");
+  if ((SHEET_TYPES as readonly string[]).includes(bare)) return bare as SheetType;
+  return "";
+}
+
+/** کلیدهای نرخ‌های قدیمی («ورق روغنی-1mm») به شکل جدید («روغنی-1mm») */
+export function normalizeRateKey(k: string): string {
+  return k.replace(/^ورق\s+/, "");
+}
+
 export const GAS_TYPES = ["اکسیژن", "نیتروژن"] as const;
 export type GasType = (typeof GAS_TYPES)[number];
 
 /** نرخ برش (ریال) به ازای هر متر به ازای هر میلی‌متر ضخامت — E:F */
 export const CUTTING_RATES: Record<string, number> = {
-  "ورق روغنی-اکسیژن": 100_000,
-  "ورق روغنی-نیتروژن": 100_000,
-  "ورق سیاه-اکسیژن": 100_000,
-  "ورق سیاه-نیتروژن": 100_000,
+  "روغنی-اکسیژن": 100_000,
+  "روغنی-نیتروژن": 100_000,
+  "سیاه-اکسیژن": 100_000,
+  "سیاه-نیتروژن": 100_000,
   "استیل-اکسیژن": 190_000,
   "استیل-نیتروژن": 220_000,
   "گالوانیزه-اکسیژن": 165_000,
@@ -31,18 +50,18 @@ export const CUTTING_RATES: Record<string, number> = {
 
 /** نرخ ورق (ریال به ازای هر کیلوگرم) — O:P */
 export const SHEET_PRICES: Record<string, number> = {
-  "ورق روغنی-0.7mm": 750_000,
-  "ورق روغنی-1mm": 1_000_000,
-  "ورق روغنی-1.25mm": 670_000,
-  "ورق روغنی-1.5mm": 2_100_000,
-  "ورق سیاه-2mm": 2_300_000,
-  "ورق سیاه-3mm": 1_500_000,
-  "ورق سیاه-4mm": 1_400_000,
-  "ورق سیاه-5mm": 600_000,
-  "ورق سیاه-6mm": 1_500_000,
-  "ورق سیاه-8mm": 600_000,
-  "ورق سیاه-9mm": 600_000,
-  "ورق سیاه-10mm": 1_500_000,
+  "روغنی-0.7mm": 750_000,
+  "روغنی-1mm": 1_000_000,
+  "روغنی-1.25mm": 670_000,
+  "روغنی-1.5mm": 2_100_000,
+  "سیاه-2mm": 2_300_000,
+  "سیاه-3mm": 1_500_000,
+  "سیاه-4mm": 1_400_000,
+  "سیاه-5mm": 600_000,
+  "سیاه-6mm": 1_500_000,
+  "سیاه-8mm": 600_000,
+  "سیاه-9mm": 600_000,
+  "سیاه-10mm": 1_500_000,
   "استیل-0.7mm": 4_000_000,
   "استیل-1mm": 4_000_000,
   "استیل-1.5mm": 4_000_000,
@@ -57,8 +76,8 @@ export const SHEET_PRICES: Record<string, number> = {
 
 /** ضخامت‌های ثبت‌شده برای هر نوع ورق */
 export const THICKNESS_OPTIONS: Record<SheetType, number[]> = {
-  "ورق روغنی": [0.7, 1, 1.25, 1.5],
-  "ورق سیاه": [2, 3, 4, 5, 6, 8, 9, 10],
+  روغنی: [0.7, 1, 1.25, 1.5],
+  سیاه: [2, 3, 4, 5, 6, 8, 9, 10],
   گالوانیزه: [0.6, 0.7, 0.9, 1, 1.25, 1.5, 2],
   استیل: [0.7, 1, 1.5],
   فنر: [0.5, 0.7, 1, 1.25, 1.5, 2],
@@ -66,8 +85,8 @@ export const THICKNESS_OPTIONS: Record<SheetType, number[]> = {
 
 /** چگالی ورق (g/cm³) — فرمول وزن: چگالی × حجم (فنر: فولاد فنر ≈ 7.85) */
 export const DENSITY: Record<SheetType, number> = {
-  "ورق روغنی": 7.85,
-  "ورق سیاه": 7.85,
+  روغنی: 7.85,
+  سیاه: 7.85,
   استیل: 7.9,
   گالوانیزه: 7.1,
   فنر: 7.85,
@@ -203,6 +222,9 @@ export function calculate(input: CalcInput): CalcResult {
   const SP = input.rates?.sheetPrices ?? SHEET_PRICES;
   const DN = input.rates?.densities ?? DENSITY;
 
+  // سازگاری با داده‌های قدیمی: «ورق روغنی» → «روغنی»
+  const sheetType = normalizeSheetType(input.sheetType);
+
   const thickness = num(input.thickness);
   const cutLen = num(input.cutLengthPerPiece);
   const prsPer = num(input.prsPerPiece);
@@ -211,10 +233,10 @@ export function calculate(input: CalcInput): CalcResult {
   // ── نرخ برش (B10) ──
   let cuttingRate: number | null = null;
   let cuttingRateError: string | null = null;
-  if (!input.sheetType) cuttingRateError = "نوع ورق را انتخاب کنید";
+  if (!sheetType) cuttingRateError = "نوع ورق را انتخاب کنید";
   else if (!input.gasType) cuttingRateError = "نوع گاز را انتخاب کنید";
   else {
-    const r = CR[`${input.sheetType}-${input.gasType}`];
+    const r = CR[`${sheetType}-${input.gasType}`];
     if (r === undefined) cuttingRateError = "ترکیب نامعتبر";
     else cuttingRate = r;
   }
@@ -264,18 +286,18 @@ export function calculate(input: CalcInput): CalcResult {
     if (thickness === null) {
       sheetWeightError = "ضخامت ورق را وارد کنید";
       sheetTotalError = sheetWeightError;
-    } else if (!input.sheetType) {
+    } else if (!sheetType) {
       sheetWeightError = "نوع ورق را انتخاب کنید";
       sheetTotalError = sheetWeightError;
     } else {
-      sheetWt = sheetWeight(input.dims, thickness, input.sheetType, DN);
+      sheetWt = sheetWeight(input.dims, thickness, sheetType, DN);
       const manual = num(input.sheetPriceManual);
       if (manual !== null && manual > 0) {
         // نرخ دستی (فی) ملاک محاسبه است
         sheetPerKg = manual;
         sheetTotal = sheetWt * manual;
       } else {
-        const key = `${input.sheetType}-${thickness}mm`;
+        const key = `${sheetType}-${thickness}mm`;
         const rate = SP[key];
         if (rate === undefined) {
           sheetPerKgError = "نرخ برای این ضخامت ثبت نشده — نرخ دستی وارد کنید";
@@ -322,7 +344,7 @@ export function calculate(input: CalcInput): CalcResult {
       unit: "متر",
       unitPrice: round2(costPerPiece / cutLen!),
       amount: Math.round(totalCutting!),
-      material: input.sheetType,
+      material: sheetType,
       thickness: String(thickness),
     });
   }
@@ -337,18 +359,15 @@ export function calculate(input: CalcInput): CalcResult {
     });
   }
   if (!input.sheetFromCustomer && sheetTotal !== null && sheetTotal > 0) {
-    // «ورق روغنی» و «ورق سیاه» خودشان «ورق» دارند — دوبار نوشته نشود
-    const sheetDesc = input.sheetType.startsWith("ورق")
-      ? input.sheetType
-      : `ورق ${input.sheetType}`;
+    // کلمهٔ «ورق» فقط همین‌جا به شرح ردیف اضافه می‌شود — برای همهٔ نوع‌ها یکسان
     items.push({
       row: row++,
-      desc: sheetDesc,
+      desc: `ورق ${sheetType}`,
       qty: round2(sheetWt ?? 0),
       unit: "کیلو",
       unitPrice: Math.round(sheetPerKg ?? 0),
       amount: Math.round(sheetTotal),
-      material: input.sheetType,
+      material: sheetType,
       thickness: String(thickness),
     });
   }

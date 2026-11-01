@@ -7,6 +7,7 @@
 
 import {
   DEFAULT_RATES,
+  normalizeRateKey,
   type RatesConfig,
   type SheetType,
 } from "@/lib/pricing";
@@ -23,11 +24,27 @@ function safeParse(raw: string | null): Partial<RatesConfig> | null {
   }
 }
 
+/** کلیدهای نسخه‌های قبل (مثل «ورق روغنی-1mm») به شکل جدید («روغنی-1mm») تبدیل می‌شود */
+function migrateKeys(obj: unknown): Record<string, unknown> {
+  if (!obj || typeof obj !== "object") return {};
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj as Record<string, unknown>))
+    out[normalizeRateKey(k)] = v;
+  return out;
+}
+
 /** پارامترهای ذخیره‌شدهٔ کاربر — در نبودِ مقادیر ذخیره‌شده، پیش‌فرض برمی‌گردد */
 export function loadRates(): RatesConfig {
   if (typeof window === "undefined") return { ...DEFAULT_RATES };
-  const saved = safeParse(localStorage.getItem(RATES_KEY));
-  if (!saved) return { ...DEFAULT_RATES };
+  const savedRaw = safeParse(localStorage.getItem(RATES_KEY));
+  if (!savedRaw) return { ...DEFAULT_RATES };
+  // مهاجرت کلیدهای قدیمی
+  const saved: Partial<RatesConfig> = {
+    ...savedRaw,
+    cuttingRates: migrateKeys(savedRaw.cuttingRates),
+    sheetPrices: migrateKeys(savedRaw.sheetPrices),
+    densities: migrateKeys(savedRaw.densities) as RatesConfig["densities"],
+  };
 
   const d = DEFAULT_RATES;
   const numOr = (v: unknown, fallback: number): number =>
