@@ -18,7 +18,7 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
-import { Building2, Save, RotateCcw, Undo2, Info, ImageUp, ImageOff, Trash2 } from "lucide-react";
+import { Building2, Save, RotateCcw, Undo2, Info, ImageUp, ImageOff, Trash2, PenLine } from "lucide-react";
 import type { BusinessConfig } from "@/lib/business";
 
 interface Props {
@@ -39,6 +39,7 @@ export function BusinessView({
   const b = draft ?? business;
   const [confirmReset, setConfirmReset] = useState(false);
   const logoRef = useRef<HTMLInputElement>(null);
+  const sigRef = useRef<HTMLInputElement>(null);
 
   // تأیید بازگشت پس از ۴ ثانیه به حالت عادی برمی‌گردد
   useEffect(() => {
@@ -66,6 +67,34 @@ export function BusinessView({
         const sy = (img.height - side) / 2;
         ctx.drawImage(img, sx, sy, side, side, 0, 0, S, S);
         patch({ logo: canvas.toDataURL("image/png") });
+      };
+      img.src = reader.result as string;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  /** انتخاب و کوچک‌سازی امضا — نسبت ابعاد حفظ می‌شود (حداکثر ۵۱۲×۲۵۶) */
+  const handleSignatureFile = (file: File) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const maxW = 512;
+        const maxH = 256;
+        const ratio = Math.min(
+          maxW / (img.width || maxW),
+          maxH / (img.height || maxH),
+          1
+        );
+        const w = Math.max(1, Math.round(img.width * ratio));
+        const h = Math.max(1, Math.round(img.height * ratio));
+        const canvas = document.createElement("canvas");
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, w, h);
+        patch({ signature: canvas.toDataURL("image/png") });
       };
       img.src = reader.result as string;
     };
@@ -207,6 +236,62 @@ export function BusinessView({
             onChange={(e) => {
               const f = e.target.files?.[0];
               if (f) handleLogoFile(f);
+              e.target.value = "";
+            }}
+          />
+        </div>
+
+        {/* امضای فروشنده */}
+        <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-muted/30 p-3 dark:bg-muted/10">
+          <div className="flex items-center gap-3">
+            {b.signature ? (
+              <img
+                src={b.signature}
+                alt="امضای فروشنده"
+                className="h-14 w-28 rounded-xl border bg-white object-contain p-0.5"
+              />
+            ) : (
+              <div className="flex h-14 w-28 items-center justify-center rounded-xl border border-dashed">
+                <PenLine className="size-5 text-muted-foreground/50" />
+              </div>
+            )}
+            <div>
+              <p className="text-sm font-medium">امضای فروشنده (اختیاری)</p>
+              <p className="mt-0.5 text-xs text-muted-foreground">
+                در کادر «مهر و امضای فروشنده» پایین فاکتور درج می‌شود — نسبت
+                تصویر حفظ می‌شود
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {b.signature && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-destructive hover:text-destructive"
+                onClick={() => patch({ signature: undefined })}
+              >
+                <Trash2 className="size-4" />
+                حذف
+              </Button>
+            )}
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => sigRef.current?.click()}
+            >
+              <ImageUp className="size-4" />
+              {b.signature ? "تغییر امضا" : "انتخاب تصویر"}
+            </Button>
+          </div>
+          <input
+            ref={sigRef}
+            type="file"
+            accept="image/*"
+            className="hidden"
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) handleSignatureFile(f);
               e.target.value = "";
             }}
           />

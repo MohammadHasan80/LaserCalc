@@ -540,8 +540,15 @@ function InvoiceSheet({
         {/* ── امضاها — در حالت A4 به پایین صفحه چسبیده می‌ماند ── */}
         <div className={s.signatures}>
           {["مهر و امضای فروشنده", "مهر و امضای مشتری"].map((label) => (
-            <div key={label} className={s.sigBox}>
+            <div key={label} className={`${s.sigBox} relative`}>
               {label}
+              {label === "مهر و امضای فروشنده" && biz.signature && (
+                <img
+                  src={biz.signature}
+                  alt="امضای فروشنده"
+                  className="absolute bottom-1 left-1/2 max-h-6 w-auto max-w-[85%] -translate-x-1/2 object-contain"
+                />
+              )}
               <div className={s.sigLine} />
             </div>
           ))}
@@ -877,9 +884,16 @@ function InvoiceSheetPreview({ d }: { d: SheetData }) {
           {["مهر و امضای فروشنده", "مهر و امضای مشتری"].map((label) => (
             <div
               key={label}
-              className="rounded-lg border border-dashed border-slate-300 px-3 pb-7 pt-2 text-center text-[11px] text-slate-500"
+              className="relative rounded-lg border border-dashed border-slate-300 px-3 pb-7 pt-2 text-center text-[11px] text-slate-500"
             >
               {label}
+              {label === "مهر و امضای فروشنده" && biz.signature && (
+                <img
+                  src={biz.signature}
+                  alt="امضای فروشنده"
+                  className="absolute bottom-1 left-1/2 max-h-6 w-auto max-w-[85%] -translate-x-1/2 object-contain"
+                />
+              )}
               <div className="mt-5 border-t border-dashed border-slate-300" />
             </div>
           ))}
@@ -1077,17 +1091,22 @@ export function InvoiceView({
   const handleDownloadPdf = async () => {
     if (exporting) return;
     setExporting(true);
-    // نام فایل: نام شخص یا شرکت - نوع ورق - ضخامت ورق - تاریخ
+    // نام فایل: نام شخص یا شرکت - ورق {نوع} ({ضخامت}mm) - تاریخ
+    // پرانتز دور ضخامت + کلمهٔ «ورق» قبل نوع → نمایش درست در محیط راست‌به‌چپ
     const sanitizePart = (s: string) =>
       s.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
     const thicknessClean = toEnDigits(String(input.thickness)).replace(
       /[^\d.]/g,
       ""
     );
+    const typePart = input.sheetType.trim()
+      ? `ورق ${input.sheetType.trim()}`
+      : "";
+    const thicknessPart =
+      thicknessClean !== "" ? `(${thicknessClean}mm)` : "";
     const filenameParts = [
       customerDisplay.slice(0, 60),
-      input.sheetType.trim(),
-      thicknessClean !== "" ? `${thicknessClean}mm` : "",
+      [typePart, thicknessPart].filter((p) => p !== "").join(" "),
       dateStr.replace(/\//g, "."),
     ]
       .filter((p) => p !== "")

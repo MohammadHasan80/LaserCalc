@@ -23,6 +23,8 @@ export interface BusinessConfig {
   terms: string[];
   /** لوگوی اختصاصی روی هدر فاکتور — dataURL تصویر مربعی (اختیاری) */
   logo?: string;
+  /** امضای فروشنده — dataURL تصویر (اختیاری)؛ در کادر «مهر و امضای فروشنده» پایین فاکتور درج می‌شود */
+  signature?: string;
 }
 
 export const BUSINESS = {

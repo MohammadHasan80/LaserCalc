@@ -51,6 +51,11 @@ export function loadBusiness(): BusinessConfig {
     saved.logo.startsWith("data:image/")
       ? { logo: saved.logo }
       : {}),
+    // امضای فروشنده: فقط dataURL تصویر معتبر حفظ می‌شود
+    ...(typeof saved.signature === "string" &&
+    saved.signature.startsWith("data:image/")
+      ? { signature: saved.signature }
+      : {}),
   };
 }
 
