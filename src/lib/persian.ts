@@ -171,3 +171,127 @@ export function jalaliMonthInfo(date: Date): { key: string; label: string } {
     label: jalaliMonthLabel(y, m),
   };
 }
+
+// ─── تبدیل تاریخ شمسی ↔ میلادی (الگوریتم استاندارد jalaali) ──
+
+export interface JalaliYmd {
+  y: number;
+  m: number;
+  d: number;
+}
+
+const jalaliYmdFmt = new Intl.DateTimeFormat("en-u-ca-persian", {
+  year: "numeric",
+  month: "2-digit",
+  day: "2-digit",
+});
+
+/** اجزای عددی تاریخ شمسی یک تاریخ میلادی — مثل {y:1405, m:8, d:6} */
+export function jalaliYmd(date: Date = new Date()): JalaliYmd {
+  try {
+    const p = jalaliYmdFmt.formatToParts(date);
+    return {
+      y: Number(p.find((x) => x.type === "year")?.value ?? 0),
+      m: Number(p.find((x) => x.type === "month")?.value ?? 0),
+      d: Number(p.find((x) => x.type === "day")?.value ?? 0),
+    };
+  } catch {
+    return { y: 0, m: 1, d: 1 };
+  }
+}
+
+const jDiv = (a: number, b: number) => ~~(a / b);
+const jMod = (a: number, b: number) => a - ~~(a / b) * b;
+
+const JALALI_BREAKS = [
+  -61, 9, 38, 199, 426, 686, 756, 818, 1111, 1181, 1210, 1635, 2060, 2097,
+  2192, 2262, 2324, 2394, 2456, 3178,
+];
+
+/** محاسبهٔ سال کبیسه و روز آغاز سال شمسی در تقویم میلادی */
+function jalCal(jy: number): { leap: number; gy: number; march: number } {
+  const bl = JALALI_BREAKS.length;
+  const gy = jy + 621;
+  let leapJ = -14;
+  let jp = JALALI_BREAKS[0]!;
+  let jump = 0;
+  for (let i = 1; i < bl; i += 1) {
+    const jm = JALALI_BREAKS[i]!;
+    jump = jm - jp;
+    if (jy < jm) break;
+    leapJ += jDiv(jump, 33) * 8 + jDiv(jMod(jump, 33), 4);
+    jp = jm;
+  }
+  let n = jy - jp;
+  leapJ += jDiv(n, 33) * 8 + jDiv(jMod(n, 33) + 3, 4);
+  if (jMod(jump, 33) === 4 && jump - n === 4) leapJ += 1;
+  const leapG = jDiv(gy, 4) - jDiv((jDiv(gy, 100) + 1) * 3, 4) - 150;
+  const march = 20 + leapJ - leapG;
+  if (jump - n < 6) n = n - jump + jDiv(jump + 4, 33) * 33;
+  let leap = jMod(jMod(n + 1, 33) - 1, 4);
+  if (leap === -1) leap = 4;
+  return { leap, gy, march };
+}
+
+/** شمارهٔ روز ژولینی از تاریخ میلادی */
+function g2d(gy: number, gm: number, gd: number): number {
+  let d =
+    jDiv((gy + jDiv(gm - 8, 6) + 100100) * 1461, 4) +
+    jDiv(153 * jMod(gm + 9, 12) + 2, 5) +
+    gd -
+    34840408;
+  d = d - jDiv(jDiv(gy + 100100 + jDiv(gm - 8, 6), 100) * 3, 4) + 752;
+  return d;
+}
+
+/** تاریخ میلادی از شمارهٔ روز ژولینی */
+function d2g(jdn: number): { gy: number; gm: number; gd: number } {
+  let j = 4 * jdn + 139361631;
+  j += jDiv(jDiv(4 * jdn + 183187720, 146097) * 3, 4) * 4 - 3908;
+  const i = jDiv(jMod(j, 1461), 4) * 5 + 308;
+  const gd = jDiv(jMod(i, 153), 5) + 1;
+  const gm = jMod(jDiv(i, 153), 12) + 1;
+  const gy = jDiv(j, 1461) - 100100 + jDiv(8 - gm, 6);
+  return { gy, gm, gd };
+}
+
+/** شمارهٔ روز ژولینی از تاریخ شمسی */
+function j2d(jy: number, jm: number, jd: number): number {
+  const r = jalCal(jy);
+  return (
+    g2d(r.gy, 3, r.march) + (jm - 1) * 31 - jDiv(jm, 7) * (jm - 7) + jd - 1
+  );
+}
+
+/** تبدیل تاریخ شمسی به میلادی */
+export function jalaliToGregorian(
+  jy: number,
+  jm: number,
+  jd: number
+): { gy: number; gm: number; gd: number } {
+  return d2g(j2d(jy, jm, jd));
+}
+
+/** سال شمسی کبیسه است؟ (اسفند ۳۰ روز دارد) */
+export function isJalaliLeap(jy: number): boolean {
+  return jalCal(jy).leap === 0;
+}
+
+/** تعداد روزهای یک ماه شمسی */
+export function jalaliMonthLength(jy: number, jm: number): number {
+  if (jm <= 6) return 31;
+  if (jm <= 11) return 30;
+  return isJalaliLeap(jy) ? 30 : 29;
+}
+
+/** تبدیل ارقام لاتین به فارسی (بدون جداکنندهٔ هزار — مناسب سال و روز) */
+export function faDigits(s: string | number): string {
+  return String(s).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[Number(d)] ?? d);
+}
+
+/** رشتهٔ نمایشی تاریخ شمسی — مثل ۱۴۰۵/۰۸/۰۶ */
+export function formatJalaliYmd({ y, m, d }: JalaliYmd): string {
+  return `${faDigits(y)}/${faDigits(String(m).padStart(2, "0"))}/${faDigits(
+    String(d).padStart(2, "0")
+  )}`;
+}

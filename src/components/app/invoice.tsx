@@ -6,6 +6,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Card,
   CardContent,
   CardHeader,
@@ -41,11 +48,18 @@ import {
   type BusinessConfig,
 } from "@/lib/business";
 import {
+  faDigits,
   faMoney,
   faNum,
+  formatJalaliYmd,
+  jalaliMonthLength,
+  jalaliToGregorian,
+  jalaliYmd,
   moneyToWords,
+  PERSIAN_MONTHS,
   todayJalali,
   toEnDigits,
+  type JalaliYmd,
 } from "@/lib/persian";
 import {
   DEFAULT_PAPER,
@@ -979,9 +993,13 @@ export function InvoiceView({
   const biz = business ?? DEFAULT_BUSINESS;
   const { toast } = useToast();
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
-  const [date] = useState(() => new Date());
-  const dateStr = todayJalali(date);
-  const validStr = todayJalali(new Date(date.getTime() + 7 * 86_400_000));
+  // تاریخ فاکتور — پیش‌فرض همان روز و قابل تغییر با انتخابگر شمسی
+  const [jDate, setJDate] = useState<JalaliYmd>(() => jalaliYmd(new Date()));
+  const dateStr = formatJalaliYmd(jDate);
+  const validStr = useMemo(() => {
+    const g = jalaliToGregorian(jDate.y, jDate.m, jDate.d);
+    return todayJalali(new Date(g.gy, g.gm - 1, g.gd + 7));
+  }, [jDate]);
   const [exporting, setExporting] = useState(false);
   // تنظیمات کاغذ فاکتور (اندازه + جهت) — با ماندگاری در localStorage
   const [paper, setPaperState] = useState<PaperConfig>(DEFAULT_PAPER);
@@ -995,6 +1013,29 @@ export function InvoiceView({
       return next;
     });
   };
+  // تغییر تاریخ فاکتور — اگر روز از تعداد روزهای ماه بیشتر شود کوچک می‌شود
+  const patchJDate = (patch: Partial<JalaliYmd>) => {
+    setJDate((prev) => {
+      const y = patch.y ?? prev.y;
+      const m = patch.m ?? prev.m;
+      const d = Math.min(patch.d ?? prev.d, jalaliMonthLength(y, m));
+      return { y, m, d };
+    });
+  };
+  const resetJDateToToday = () => setJDate(jalaliYmd(new Date()));
+  // گزینه‌های انتخابگر تاریخ (۶ سال قبل تا سال بعد)
+  const todayParts = jalaliYmd(new Date());
+  const isTodayJ =
+    todayParts.y === jDate.y &&
+    todayParts.m === jDate.m &&
+    todayParts.d === jDate.d;
+  const yearOptions: number[] = [];
+  for (let y = todayParts.y - 6; y <= todayParts.y + 1; y += 1)
+    yearOptions.push(y);
+  const dayOptions = Array.from(
+    { length: jalaliMonthLength(jDate.y, jDate.m) },
+    (_, i) => i + 1
+  );
   // پل اندروید موجود است؟ (در WebView اپ APK چاپ سیستم کار نمی‌کند)
   const [hasBridge, setHasBridge] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -1023,10 +1064,35 @@ export function InvoiceView({
   const printScale = Math.min(box.w / design.w, box.h / design.h);
   const pageSizeLabel = `${paper.size.toUpperCase()} ${paper.orientation === "portrait" ? "عمودی" : "افقی"}`;
 
+  const customerDisplay = input.customerName.trim()
+    ? input.customerName.trim()
+    : "مشتری تعیین نشده";
+  const phoneDisplay = input.customerPhone.trim()
+    ? input.customerPhone.trim()
+    : "—";
+  const addressDisplay = input.customerAddress.trim()
+    ? input.customerAddress.trim()
+    : "—";
+
   const handleDownloadPdf = async () => {
     if (exporting) return;
     setExporting(true);
-    const filename = `invoice-${invoiceNumber || "0"}.pdf`;
+    // نام فایل: نام شخص یا شرکت - نوع ورق - ضخامت ورق - تاریخ
+    const sanitizePart = (s: string) =>
+      s.replace(/[\\/:*?"<>|]/g, "-").replace(/\s+/g, " ").trim();
+    const thicknessClean = toEnDigits(String(input.thickness)).replace(
+      /[^\d.]/g,
+      ""
+    );
+    const filenameParts = [
+      customerDisplay.slice(0, 60),
+      input.sheetType.trim(),
+      thicknessClean !== "" ? `${thicknessClean}mm` : "",
+      dateStr.replace(/\//g, "."),
+    ]
+      .filter((p) => p !== "")
+      .map(sanitizePart);
+    const filename = `${filenameParts.join(" - ")}.pdf`;
     try {
       const { blob, dataUrl } = await buildInvoicePdf(paper);
       const bridge = (
@@ -1074,16 +1140,6 @@ export function InvoiceView({
     const clean = toEnDigits(raw).replace(/[^\d.]/g, "");
     onPatch({ [key]: clean === "" ? 0 : Number(clean) });
   };
-
-  const customerDisplay = input.customerName.trim()
-    ? input.customerName.trim()
-    : "مشتری تعیین نشده";
-  const phoneDisplay = input.customerPhone.trim()
-    ? input.customerPhone.trim()
-    : "—";
-  const addressDisplay = input.customerAddress.trim()
-    ? input.customerAddress.trim()
-    : "—";
 
   // داده‌های مشترک برگ فاکتور (پیش‌نمایش و نسخهٔ A4)
   const sheetData: SheetData = {
@@ -1161,6 +1217,70 @@ export function InvoiceView({
                 onChange={(e) => numPatch("discountAmount")(e.target.value)}
               />
             </div>
+          </div>
+          {/* ── تاریخ فاکتور — پیش‌فرض همان روز، قابل تغییر ── */}
+          <div className="space-y-2">
+            <Label>تاریخ فاکتور (شمسی)</Label>
+            <div className="flex flex-wrap items-center gap-2">
+              <Select
+                value={String(jDate.y)}
+                onValueChange={(v) => patchJDate({ y: Number(v) })}
+              >
+                <SelectTrigger className="h-9 w-[7.5rem]">
+                  <SelectValue placeholder="سال" />
+                </SelectTrigger>
+                <SelectContent>
+                  {yearOptions.map((y) => (
+                    <SelectItem key={y} value={String(y)}>
+                      {faDigits(y)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(jDate.m)}
+                onValueChange={(v) => patchJDate({ m: Number(v) })}
+              >
+                <SelectTrigger className="h-9 w-32">
+                  <SelectValue placeholder="ماه" />
+                </SelectTrigger>
+                <SelectContent>
+                  {PERSIAN_MONTHS.map((name, i) => (
+                    <SelectItem key={name} value={String(i + 1)}>
+                      {name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={String(jDate.d)}
+                onValueChange={(v) => patchJDate({ d: Number(v) })}
+              >
+                <SelectTrigger className="h-9 w-24">
+                  <SelectValue placeholder="روز" />
+                </SelectTrigger>
+                <SelectContent>
+                  {dayOptions.map((d) => (
+                    <SelectItem key={d} value={String(d)}>
+                      {faDigits(d)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button
+                type="button"
+                variant="outline"
+                className="h-9"
+                onClick={resetJDateToToday}
+                disabled={isTodayJ}
+              >
+                <CalendarDays className="size-4" /> امروز
+              </Button>
+            </div>
+            <p className="text-[11px] leading-4 text-slate-500">
+              پیش‌فرض تاریخ همان روز است؛ روی پیش‌نمایش، نام فایل دانلودی و
+              خروجی چاپ اثر می‌گذارد.
+            </p>
           </div>
           {/* ── اندازه و جهت کاغذ فاکتور ── */}
           <div className="grid gap-4 sm:grid-cols-2">
