@@ -1107,17 +1107,21 @@ export function InvoiceView({
     const filenameParts = [
       customerDisplay.slice(0, 60),
       [typePart, thicknessPart].filter((p) => p !== "").join(" "),
-      dateStr.replace(/\//g, "."),
+      // تاریخ در نام فایل با ارقام لاتین — تِیل «1405.08.11.pdf» یک تکهٔ یکدست
+      // LTR می‌شود و در تلگرام/فایل‌منیجر (هر جهت پاراگرافی) طبیعی خوانده
+      // می‌شود؛ با ارقام فارسی، پسوند «.pdf» بین خط تیره و تاریخ گیر می‌کرد.
+      // تاریخ داخل خود فاکتور همچنان با ارقام فارسی است.
+      toEnDigits(dateStr).replace(/\//g, "."),
     ]
       .filter((p) => p !== "")
       .map(sanitizePart);
-    // RLM (U+200F) ابتدای نام و LRM (U+200E) قبل از پسوند فقط در مسیر اندروید:
-    // فایل مستقیم روی دیسک نوشته می‌شود و تلگرام/فایل‌منیجر جهت RTL را قطعی
-    // می‌گیرند و «.pdf» به تاریخ می‌چسبد. در مسیر وب/ویندوز این نویسه‌ها را
-    // Chromium با «_» جایگزین می‌کند، پس نام وب باید بدون کنترل بماند.
+    // RLM (U+200F) ابتدای نام فقط در مسیر اندروید: جهت RTL را قطعی می‌گیرد
+    // حتی وقتی نام مشتری لاتین است. دیگر نیازی به کنترل قبل از پسوند نیست —
+    // تِیل «1405.08.11.pdf» خودش یک تکهٔ LTR پایدار است. در مسیر وب/ویندوز
+    // کنترل‌ها را Chromium با «_» جایگزین می‌کند، پس نام وب باید بدون کنترل بماند.
     const baseName = filenameParts.join(" - ");
     const filename = `${baseName}.pdf`;
-    const filenameRtl = `\u200F${baseName}\u200E.pdf`;
+    const filenameRtl = `\u200F${baseName}.pdf`;
     try {
       const { blob, dataUrl } = await buildInvoicePdf(paper);
       const bridge = (
