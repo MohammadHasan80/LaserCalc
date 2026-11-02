@@ -565,15 +565,15 @@ function InvoiceSheet({
         )}
         {biz.phone && (
           <span className="flex items-center gap-1.5 tabular-nums">
-            <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
-            {/* شماره تلفن باید عیناً بدون ممیز و بدون تبدیل نمایش داده شود */}
+            {/* آیکون سمت چپ شماره — در جریان RTL فرزند دوم چپ می‌افتد */}
             <span dir="ltr">{biz.phone}</span>
+            <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
           </span>
         )}
         {biz.instagram && (
           <span className="flex items-center gap-1.5">
-            <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
             <span dir="ltr">@{biz.instagram}</span>
+            <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
           </span>
         )}
         {biz.website && (
@@ -910,15 +910,15 @@ function InvoiceSheetPreview({ d }: { d: SheetData }) {
         )}
         {biz.phone && (
           <span className="flex items-center gap-1.5 tabular-nums">
-            <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
-            {/* شماره تلفن باید عیناً بدون ممیز و بدون تبدیل نمایش داده شود */}
+            {/* آیکون سمت چپ شماره — در جریان RTL فرزند دوم چپ می‌افتد */}
             <span dir="ltr">{biz.phone}</span>
+            <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
           </span>
         )}
         {biz.instagram && (
           <span className="flex items-center gap-1.5">
-            <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
             <span dir="ltr">@{biz.instagram}</span>
+            <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
           </span>
         )}
         {biz.website && (
