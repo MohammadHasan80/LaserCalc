@@ -1111,7 +1111,13 @@ export function InvoiceView({
     ]
       .filter((p) => p !== "")
       .map(sanitizePart);
-    const filename = `${filenameParts.join(" - ")}.pdf`;
+    // RLM (U+200F) ابتدای نام و LRM (U+200E) قبل از پسوند فقط در مسیر اندروید:
+    // فایل مستقیم روی دیسک نوشته می‌شود و تلگرام/فایل‌منیجر جهت RTL را قطعی
+    // می‌گیرند و «.pdf» به تاریخ می‌چسبد. در مسیر وب/ویندوز این نویسه‌ها را
+    // Chromium با «_» جایگزین می‌کند، پس نام وب باید بدون کنترل بماند.
+    const baseName = filenameParts.join(" - ");
+    const filename = `${baseName}.pdf`;
+    const filenameRtl = `\u200F${baseName}\u200E.pdf`;
     try {
       const { blob, dataUrl } = await buildInvoicePdf(paper);
       const bridge = (
@@ -1121,11 +1127,11 @@ export function InvoiceView({
       ).AndroidBridge;
       if (bridge?.savePdf) {
         const base64 = dataUrl.split("base64,")[1] ?? "";
-        const res = bridge.savePdf(base64, filename);
+        const res = bridge.savePdf(base64, filenameRtl);
         if (res === "ok") {
           toast({
             title: "PDF ذخیره شد",
-            description: `فایل ${filename} در پوشه Downloads ذخیره شد.`,
+            description: `فایل ${baseName}.pdf در پوشه Downloads ذخیره شد.`,
           });
         } else if (res === "permission") {
           toast({
