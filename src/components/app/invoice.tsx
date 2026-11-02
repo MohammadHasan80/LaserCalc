@@ -53,7 +53,6 @@ import {
   designOf,
   loadPaper,
   pagePx,
-  paperScale,
   savePaper,
   type PaperConfig,
 } from "@/lib/paper-store";
@@ -568,6 +567,343 @@ function InvoiceSheet({
 }
 
 /**
+ * پیش‌نمایش فاکتور داخل برنامه — همان طرح واکنش‌گرای نسخهٔ ۱٫۱٫۶:
+ * کارت سیالِ هم‌عرض صفحه با متن درشت و خوانا؛ بازتابِ مو‌به‌موی کاغذ چاپ نیست —
+ * خروجی PDF و چاپ از برگ پنهان (invoice-a4-sheet) با کاغذ انتخابی ساخته می‌شود.
+ */
+function InvoiceSheetPreview({ d }: { d: SheetData }) {
+  const { biz, result } = d;
+  const customerRows: [string, string][] = [
+    ["نام شرکت / شخص:", d.customerDisplay],
+    ["شماره تماس:", d.phoneDisplay],
+    ["آدرس:", d.addressDisplay],
+  ];
+  const metaPills = [
+    { icon: FileText, label: "شماره فاکتور:", value: d.invoiceNumber || "—" },
+    { icon: CalendarDays, label: "تاریخ فاکتور:", value: d.dateStr },
+    { icon: Hourglass, label: "مهلت اعتبار:", value: d.validStr },
+  ];
+  // نقشهٔ کلاس‌ها — حالت پیش‌نمایش واکنش‌گرا (مانند نسخهٔ ۱٫۱٫۶)
+  const s = {
+    root: "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm",
+    header:
+      "relative flex min-h-[128px] flex-row-reverse overflow-hidden bg-[#13233a] sm:min-h-[150px]",
+    titleWrap:
+      "relative z-10 flex w-[42%] shrink-0 flex-col justify-center gap-2.5 p-4 sm:p-5",
+    logo: "mb-2 size-10 rounded-lg bg-white/95 object-contain p-0.5 sm:size-12",
+    titleSmall: "text-base font-black leading-7 text-[#f6a21e] sm:text-lg",
+    titleBig: "text-lg font-black leading-8 text-white sm:text-2xl",
+    caption:
+      "mt-1 text-right text-[8px] font-semibold tracking-[0.3em] text-slate-400 sm:text-[9px]",
+    feature: "flex items-center gap-1 text-[10px] text-slate-200 sm:text-[11px]",
+    body: "p-4 sm:p-6",
+    topGrid: "grid gap-4 sm:grid-cols-2",
+    custTable:
+      "overflow-hidden rounded-lg border border-slate-200 text-xs sm:text-[13px]",
+    custRow: "grid grid-cols-[110px_1fr] sm:grid-cols-[128px_1fr]",
+    pill: "flex flex-1 items-center justify-between rounded-md bg-slate-100 px-3 py-2 text-xs sm:text-[13px]",
+    table:
+      "mt-5 w-full border-collapse overflow-hidden rounded-lg text-[11px] sm:text-xs",
+    bottomGrid: "mt-5 grid gap-4 sm:grid-cols-2",
+    summary:
+      "overflow-hidden rounded-lg border border-slate-200 text-xs sm:text-[13px]",
+    termsText:
+      "space-y-1.5 text-[10px] leading-4 text-slate-600 sm:text-[11px] sm:leading-5",
+    signatures: "mt-6 grid grid-cols-2 gap-4",
+    footer:
+      "flex flex-wrap items-center justify-between gap-x-4 gap-y-2 border-t-[3px] border-[#f39c1d] bg-[#13233a] px-4 py-3 text-[11px] text-slate-200 sm:px-6 sm:text-xs",
+  };
+
+  return (
+    <div className={s.root}>
+      {/* ── هدر سرمه‌ای با تصویر برش لیزر ── */}
+      <div className={s.header}>
+        <img
+          src={`${process.env.NEXT_PUBLIC_BASE_PATH ?? ""}/images/invoice-hero.png`}
+          alt=""
+          className="absolute inset-y-0 right-0 h-full w-[58%] object-cover"
+          style={{ clipPath: "polygon(7% 0, 100% 0, 100% 100%, 0% 100%)" }}
+        />
+        {/* نوار مورب نارنجی روی لبه برش تصویر */}
+        <div
+          className="absolute inset-y-0 z-[1] w-3.5 bg-gradient-to-b from-[#f6a21e] to-[#dd7d0b]"
+          style={{
+            left: "calc(42% + 8px)",
+            transform: "skewX(-13.5deg)",
+          }}
+        />
+        {/* عنوان و ویژگی‌ها — سمت چپ */}
+        <div className={s.titleWrap}>
+          <div>
+            {biz.logo && (
+              <img
+                src={biz.logo}
+                alt=""
+                className={s.logo}
+              />
+            )}
+            <p className={s.titleSmall}>فاکتور خدمات برش لیزر</p>
+            <p className={s.titleBig}>{biz.fullName}</p>
+            {biz.latinCaption && (
+              <p dir="ltr" className={s.caption}>
+                {biz.latinCaption}
+              </p>
+            )}
+          </div>
+          <div className="grid grid-cols-2 gap-x-3 gap-y-1">
+            {FEATURES.map(({ icon: Icon, label }) => (
+              <span key={label} className={s.feature}>
+                <Icon className="size-3 shrink-0 text-[#f6a21e]" />
+                {label}
+              </span>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div className={s.body}>
+        {/* ── مشخصات مشتری + شماره/تاریخ ── */}
+        <div className={s.topGrid}>
+          {/* مشخصات مشتری (راست) */}
+          <div>
+            <div className="mb-2 flex items-center gap-2">
+              <span
+                className="flex size-7 items-center justify-center rounded-md text-[#f6a21e]"
+                style={{ backgroundColor: NAVY }}
+              >
+                <UserRound className="size-4" />
+              </span>
+              <h2 className="text-sm font-bold text-[#13233a]">
+                مشخصات مشتری
+              </h2>
+            </div>
+            <div className={s.custTable}>
+              {customerRows.map(([label, value], i) => (
+                <div
+                  key={label}
+                  className={`${s.custRow} ${
+                    i > 0 ? "border-t border-slate-200" : ""
+                  }`}
+                >
+                  <span className="flex items-center border-l border-slate-200 bg-slate-100 px-2.5 py-2 font-semibold text-[#13233a]">
+                    {label}
+                  </span>
+                  <span className="px-2.5 py-2 text-slate-700">{value}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* شماره و تاریخ (چپ) */}
+          <div className="flex flex-col justify-center gap-2">
+            {metaPills.map(({ icon: Icon, label, value }) => (
+              <div key={label} className="flex items-center gap-2">
+                <span
+                  className="flex size-8 shrink-0 items-center justify-center rounded-md text-[#f6a21e]"
+                  style={{ backgroundColor: NAVY }}
+                >
+                  <Icon className="size-4" />
+                </span>
+                <div className={s.pill}>
+                  <span className="font-semibold text-[#13233a]">{label}</span>
+                  <span
+                    className="font-bold tabular-nums text-[#d97706]"
+                    suppressHydrationWarning
+                  >
+                    {value}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* ── جدول خدمات ── */}
+        <table className={s.table}>
+          <thead>
+            <tr className="text-white" style={{ backgroundColor: NAVY }}>
+              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+                ردیف
+              </th>
+              <th className="border border-[#1e3450] px-2.5 py-2.5 text-right font-semibold">
+                شرح خدمات
+              </th>
+              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+                جنس ورق
+              </th>
+              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+                ضخامت (mm)
+              </th>
+              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+                تعداد
+              </th>
+              <th className="border border-[#1e3450] px-1.5 py-2.5 text-right font-semibold">
+                قیمت واحد (ریال)
+              </th>
+              <th className="border border-[#1e3450] px-2.5 py-2.5 text-right font-semibold">
+                مبلغ کل (ریال)
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {result.items.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={7}
+                  className="border border-slate-200 px-3 py-10 text-center text-slate-400"
+                >
+                  هنوز موردی برای فاکتور وجود ندارد — به ماشین‌حساب بازگردید و
+                  مقادیر را کامل کنید
+                </td>
+              </tr>
+            ) : (
+              result.items.map((it, i) => (
+                <tr
+                  key={it.row}
+                  className={i % 2 === 1 ? "bg-slate-100" : "bg-white"}
+                >
+                  <td className="border border-slate-200 px-1.5 py-2.5 text-right font-semibold tabular-nums text-[#13233a]">
+                    {faNum(it.row)}
+                  </td>
+                  <td className="border border-slate-200 px-2.5 py-2.5 text-right font-medium text-slate-800">
+                    {it.desc}
+                  </td>
+                  <td className="border border-slate-200 px-1.5 py-2.5 text-right text-slate-600">
+                    {it.material ?? "—"}
+                  </td>
+                  <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-600">
+                    {it.thickness ? faNum(it.thickness) : "—"}
+                  </td>
+                  <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-700">
+                    {faNum(it.qty)} {it.unit}
+                  </td>
+                  <td className="border border-slate-200 px-1.5 py-2.5 text-right tabular-nums text-slate-700">
+                    {faMoney(it.unitPrice)}
+                  </td>
+                  <td className="border border-slate-200 px-2.5 py-2.5 text-right font-bold tabular-nums text-slate-900">
+                    {faMoney(it.amount)}
+                  </td>
+                </tr>
+              ))
+            )}
+          </tbody>
+        </table>
+
+        {/* ── خلاصه مالی + توضیحات ── */}
+        <div className={s.bottomGrid}>
+          {/* خلاصه مالی (راست) */}
+          <div className={s.summary}>
+            <div className="flex items-center justify-between bg-slate-100 px-3 py-2.5">
+              <span className="font-semibold text-[#13233a]">
+                جمع کل (ریال)
+              </span>
+              <span className="font-bold tabular-nums text-slate-800">
+                {faMoney(d.baseTotal)}
+              </span>
+            </div>
+            {d.discount > 0 && (
+              <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5">
+                <span className="font-semibold text-[#13233a]">تخفیف</span>
+                <span className="font-bold tabular-nums text-rose-600">
+                  {faMoney(d.discount)}−
+                </span>
+              </div>
+            )}
+            {d.vatPct > 0 && (
+              <div className="flex items-center justify-between border-t border-slate-200 px-3 py-2.5">
+                <span className="font-semibold text-[#13233a]">
+                  مالیات بر ارزش افزوده ({faNum(d.vatPct)}٪)
+                </span>
+                <span className="font-bold tabular-nums text-slate-800">
+                  {faMoney(d.vatAmount)}
+                </span>
+              </div>
+            )}
+            <div
+              className="flex items-center justify-between px-3 py-3 text-sm"
+              style={{ backgroundColor: ORANGE }}
+            >
+              <span className="font-black text-[#13233a]">
+                مبلغ قابل پرداخت (ریال)
+              </span>
+              <span className="font-black tabular-nums text-[#13233a]">
+                {faMoney(d.grandTotal)}
+              </span>
+            </div>
+            <div className="border-t border-slate-200 px-3 py-1.5 text-[10px] leading-4 text-slate-500">
+              به حروف: {d.grandTotal > 0 ? moneyToWords(d.grandTotal) : "—"}
+            </div>
+          </div>
+
+          {/* توضیحات (چپ) — در نبودِ شرط‌ها نمایش داده نمی‌شود */}
+          {biz.terms.length > 0 ? (
+            <div className="rounded-lg border border-slate-200 p-3">
+              <div className="mb-2 flex items-center gap-1.5">
+                <ClipboardList className="size-4 text-[#f39c1d]" />
+                <span className="text-sm font-bold text-[#e07f0e]">
+                  توضیحات:
+                </span>
+              </div>
+              <ul className={s.termsText}>
+                {biz.terms.map((t) => (
+                  <li key={t} className="flex items-start gap-1.5">
+                    <span className="mt-1 size-1.5 shrink-0 rounded-full bg-[#f39c1d]" />
+                    <span>{t}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ) : (
+            <div />
+          )}
+        </div>
+
+        {/* ── امضاها — در حالت A4 به پایین صفحه چسبیده می‌ماند ── */}
+        <div className={s.signatures}>
+          {["مهر و امضای فروشنده", "مهر و امضای مشتری"].map((label) => (
+            <div
+              key={label}
+              className="rounded-lg border border-dashed border-slate-300 px-3 pb-7 pt-2 text-center text-[11px] text-slate-500"
+            >
+              {label}
+              <div className="mt-5 border-t border-dashed border-slate-300" />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* ── فوتر سرمه‌ای ── */}
+      <div className={s.footer}>
+        {biz.address && (
+          <span className="flex items-center gap-1.5">
+            <MapPin className="size-3.5 shrink-0 text-[#f6a21e]" />
+            {biz.address}
+          </span>
+        )}
+        {biz.phone && (
+          <span className="flex items-center gap-1.5 tabular-nums">
+            <Phone className="size-3.5 shrink-0 text-[#f6a21e]" />
+            {/* شماره تلفن باید عیناً بدون ممیز و بدون تبدیل نمایش داده شود */}
+            <span dir="ltr">{biz.phone}</span>
+          </span>
+        )}
+        {biz.instagram && (
+          <span className="flex items-center gap-1.5">
+            <Instagram className="size-3.5 shrink-0 text-[#f6a21e]" />
+            <span dir="ltr">@{biz.instagram}</span>
+          </span>
+        )}
+        {biz.website && (
+          <span className="flex items-center gap-1.5" dir="ltr">
+            <Globe className="size-3.5 shrink-0 text-[#f6a21e]" />
+            <span>{biz.website}</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+}
+/**
  * قاب صفحهٔ کاغذ — جعبهٔ بیرونی دقیقاً به ابعاد صفحهٔ کاغذ (px در ۹۶dpi) است و
  * طرح پایه با مقیاس یکنواخت داخل آن جای می‌گیرد (مبنای PDF و چاپ).
  * اگر محتوا بلندتر از یک صفحه شود، جعبه رشد می‌کند و PDF چندصفحه‌ای می‌سازد.
@@ -659,18 +995,6 @@ export function InvoiceView({
       return next;
     });
   };
-  // اندازهٔ قاب پیش‌نمایش برای مقیاس جاشدن در عرض (پیش‌نمایش مو‌به‌مو کاغذ)
-  const previewWrapRef = useRef<HTMLDivElement>(null);
-  const [wrapW, setWrapW] = useState(0);
-  useEffect(() => {
-    const el = previewWrapRef.current;
-    if (!el) return;
-    const ro = new ResizeObserver((entries) => {
-      for (const e of entries) setWrapW(e.contentRect.width);
-    });
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
   // پل اندروید موجود است؟ (در WebView اپ APK چاپ سیستم کار نمی‌کند)
   const [hasBridge, setHasBridge] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -697,7 +1021,6 @@ export function InvoiceView({
   const box = { w: page.w * 0.9975, h: page.h * 0.9975 };
   // مقیاس داخلی: جای‌گیری کامل طرح پایه در جعبهٔ صفحه
   const printScale = Math.min(box.w / design.w, box.h / design.h);
-  const previewScale = wrapW > 0 ? Math.min(wrapW / page.w, 1) : 0;
   const pageSizeLabel = `${paper.size.toUpperCase()} ${paper.orientation === "portrait" ? "عمودی" : "افقی"}`;
 
   const handleDownloadPdf = async () => {
@@ -931,23 +1254,9 @@ export function InvoiceView({
         </CardContent>
       </Card>
 
-      {/* ═════ برگ فاکتور — پیش‌نمایش دقیق کاغذ (چاپ از نسخهٔ پنهان انجام می‌شود) ═════ */}
+      {/* ═══════════ برگ فاکتور — پیش‌نمایش واکنش‌گرا (چاپ و PDF از برگ پنهان کاغذ انجام می‌شود) ═══════════ */}
       <div id="invoice-sheet" className="print-area">
-        <div ref={previewWrapRef} className="w-full">
-          {previewScale > 0 && (
-            <PageFrame
-              box={{ w: page.w * previewScale, h: page.h * previewScale }}
-              design={design}
-              scale={previewScale * paperScale(paper)}
-              className="mx-auto rounded-sm shadow-md ring-1 ring-slate-200"
-            >
-              <InvoiceSheet d={sheetData} landscape={isLandscape} />
-            </PageFrame>
-          )}
-        </div>
-        <p className="no-print mt-2 text-center text-[11px] text-slate-500">
-          پیش‌نمایش دقیق کاغذ — {pageSizeLabel}
-        </p>
+        <InvoiceSheetPreview d={sheetData} />
       </div>
 
       {/* ═══ برگ پنهان — قاب دقیق کاغذ انتخابی، مبنای خروجی PDF و چاپ ═══ */}
