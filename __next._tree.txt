@@ -1,2 +1,2 @@
-:HL["/LaserCalc/_next/static/chunks/4f046b5b6b634df4.css","style"]
-0:{"buildId":"B-E8ECO3yAt21LAR9DBy_","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"staleTime":300}
+:HL["/LaserCalc/_next/static/chunks/cc5e408a4b454878.css","style"]
+0:{"buildId":"v9M8BSPZs3sMHlGiXJVhZ","tree":{"name":"","paramType":null,"paramKey":"","hasRuntimePrefetch":false,"slots":{"children":{"name":"__PAGE__","paramType":null,"paramKey":"__PAGE__","hasRuntimePrefetch":false,"slots":null,"isRootLayout":false}},"isRootLayout":true},"staleTime":300}

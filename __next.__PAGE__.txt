@@ -1,9 +1,9 @@
 1:"$Sreact.fragment"
-2:I[47257,["/LaserCalc/_next/static/chunks/4392189f08a7af14.js"],"ClientPageRoot"]
-3:I[52683,["/LaserCalc/_next/static/chunks/1f3445ce33d51bda.js","/LaserCalc/_next/static/chunks/6ef0ca850e799530.js","/LaserCalc/_next/static/chunks/e4aaef0f70341a58.js","/LaserCalc/_next/static/chunks/dcf9e7da6f8945d8.js"],"default"]
-6:I[97367,["/LaserCalc/_next/static/chunks/4392189f08a7af14.js"],"OutletBoundary"]
+2:I[9332,["/LaserCalc/_next/static/chunks/9c0ab2c6de23c6ae.js"],"ClientPageRoot"]
+3:I[51963,["/LaserCalc/_next/static/chunks/4db83b6aad0b75e5.js","/LaserCalc/_next/static/chunks/dd3fa513fd5f6ae2.js","/LaserCalc/_next/static/chunks/d3f826d79fe83f29.js","/LaserCalc/_next/static/chunks/c0aab73ef04ec3f8.js"],"default"]
+6:I[69403,["/LaserCalc/_next/static/chunks/9c0ab2c6de23c6ae.js"],"OutletBoundary"]
 7:"$Sreact.suspense"
-0:{"buildId":"B-E8ECO3yAt21LAR9DBy_","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/LaserCalc/_next/static/chunks/e4aaef0f70341a58.js","async":true}],["$","script","script-1",{"src":"/LaserCalc/_next/static/chunks/dcf9e7da6f8945d8.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
+0:{"buildId":"v9M8BSPZs3sMHlGiXJVhZ","rsc":["$","$1","c",{"children":[["$","$L2",null,{"Component":"$3","serverProvidedParams":{"searchParams":{},"params":{},"promises":["$@4","$@5"]}}],[["$","script","script-0",{"src":"/LaserCalc/_next/static/chunks/d3f826d79fe83f29.js","async":true}],["$","script","script-1",{"src":"/LaserCalc/_next/static/chunks/c0aab73ef04ec3f8.js","async":true}]],["$","$L6",null,{"children":["$","$7",null,{"name":"Next.MetadataOutlet","children":"$@8"}]}]]}],"loading":null,"isPartial":false}
 4:{}
 5:"$0:rsc:props:children:0:props:serverProvidedParams:params"
 8:null

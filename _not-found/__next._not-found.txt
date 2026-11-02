@@ -1,4 +1,4 @@
 1:"$Sreact.fragment"
-2:I[39756,["/LaserCalc/_next/static/chunks/1f3445ce33d51bda.js","/LaserCalc/_next/static/chunks/6ef0ca850e799530.js","/LaserCalc/_next/static/chunks/4392189f08a7af14.js"],"default"]
-3:I[37457,["/LaserCalc/_next/static/chunks/1f3445ce33d51bda.js","/LaserCalc/_next/static/chunks/6ef0ca850e799530.js","/LaserCalc/_next/static/chunks/4392189f08a7af14.js"],"default"]
-0:{"buildId":"B-E8ECO3yAt21LAR9DBy_","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":null,"isPartial":false}
+2:I[49359,["/LaserCalc/_next/static/chunks/4db83b6aad0b75e5.js","/LaserCalc/_next/static/chunks/dd3fa513fd5f6ae2.js","/LaserCalc/_next/static/chunks/9c0ab2c6de23c6ae.js"],"default"]
+3:I[34179,["/LaserCalc/_next/static/chunks/4db83b6aad0b75e5.js","/LaserCalc/_next/static/chunks/dd3fa513fd5f6ae2.js","/LaserCalc/_next/static/chunks/9c0ab2c6de23c6ae.js"],"default"]
+0:{"buildId":"v9M8BSPZs3sMHlGiXJVhZ","rsc":["$","$1","c",{"children":[null,["$","$L2",null,{"parallelRouterKey":"children","template":["$","$L3",null,{}]}]]}],"loading":null,"isPartial":false}
