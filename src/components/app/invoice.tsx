@@ -1039,7 +1039,7 @@ export function InvoiceView({
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
   // تاریخ فاکتور — پیش‌فرض همان روز و قابل تغییر با انتخابگر شمسی
   const [jDate, setJDate] = useState<JalaliYmd>(() => jalaliYmd(new Date()));
-  // نمایش فاکتور: رنگی/سیاه‌وسفید + تقویم شمسی/میلادی — ماندگار در localStorage
+  // رنگی/سیاه‌وسفید + تقویم بخش تنظیم تاریخ — ماندگار در localStorage (فاکتور همیشه شمسی)
   const [prefs, setPrefsState] = useState<InvoicePrefs>(DEFAULT_INVOICE_PREFS);
   useEffect(() => {
     setPrefsState(loadInvoicePrefs());
@@ -1064,13 +1064,14 @@ export function InvoiceView({
   const pad2 = (n: number) => String(n).padStart(2, "0");
   const formatGregorian = (d: Date) =>
     `${d.getFullYear()}/${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}`;
-  // تاریخ روی فاکتور طبق تقویم انتخابی؛ میلادی با ارقام لاتین نمایش داده می‌شود
-  const dateStr =
-    prefs.cal === "gregorian"
-      ? formatGregorian(gDate)
-      : formatJalaliYmd(jDate);
-  const validStr =
-    prefs.cal === "gregorian" ? formatGregorian(gValid) : todayJalali(gValid);
+  // فاکتور (پیش‌نمایش، PDF، مهلت اعتبار و نام فایل) همیشه با تاریخ شمسی
+  // صادر می‌شود (v1.1.19) — سوئیچ تقویم فقط نمایش تاریخ در بخش تنظیم را
+  // عوض می‌کند تا برگ فاکتور ثابت و قابل‌اتکا بماند.
+  const dateStr = formatJalaliYmd(jDate);
+  const validStr = todayJalali(gValid);
+  // نمایش تاریخ تنظیم‌شده در بخش تنظیم طبق تقویم انتخابی (میلادی با ارقام لاتین)
+  const settingDateStr =
+    prefs.cal === "gregorian" ? formatGregorian(gDate) : formatJalaliYmd(jDate);
   const [exporting, setExporting] = useState(false);
   // تنظیمات کاغذ فاکتور (اندازه + جهت) — با ماندگاری در localStorage
   const [paper, setPaperState] = useState<PaperConfig>(DEFAULT_PAPER);
@@ -1366,10 +1367,16 @@ export function InvoiceView({
                 <CalendarDays className="size-4" /> امروز
               </Button>
             </div>
+            <p className="text-xs font-medium text-slate-700">
+              تاریخ تنظیم‌شده:{" "}
+              <span dir="ltr" className="tabular-nums">
+                {settingDateStr}
+              </span>
+            </p>
             <p className="text-[11px] leading-4 text-slate-500">
-              پیش‌فرض تاریخ همان روز است؛ روی پیش‌نمایش، نام فایل دانلودی و
-              خروجی چاپ اثر می‌گذارد. با «میلادی» همین تاریخ به‌صورت میلادی روی
-              فاکتور و در نام فایل می‌نشیند.
+              پیش‌فرض تاریخ همان روز است. روی پیش‌نمایش فاکتور، خروجی PDF، مهلت
+              اعتبار و نام فایل همیشه تاریخ شمسی می‌نشیند؛ سوئیچ تقویم فقط
+              نحوهٔ نمایش همین تاریخ در بخش تنظیم را عوض می‌کند.
             </p>
           </div>
           {/* ── رنگ و تقویم فاکتور (v1.1.18) ── */}
@@ -1398,7 +1405,7 @@ export function InvoiceView({
               </div>
             </div>
             <div className="space-y-2">
-              <Label>تقویم تاریخ روی فاکتور</Label>
+              <Label>تقویم تنظیم تاریخ</Label>
               <div className="grid grid-cols-2 gap-2">
                 <Button
                   type="button"
@@ -1422,8 +1429,9 @@ export function InvoiceView({
             </div>
           </div>
           <p className="text-[11px] leading-4 text-slate-500">
-            حالت سیاه‌وسفید برای چاپ اقتصادی مناسب است و تقویم میلادی برای
-            فاکتور مشتری خارجی؛ انتخاب‌ها برای دفعات بعد ذخیره می‌شود.
+            حالت سیاه‌وسفید برای چاپ اقتصادی مناسب است. تقویم فقط نمایش تاریخ
+            در بخش تنظیم را عوض می‌کند — فاکتور همیشه شمسی صادر می‌شود؛
+            انتخاب‌ها برای دفعات بعد ذخیره می‌شود.
           </p>
           {/* ── اندازه و جهت کاغذ فاکتور ── */}
           <div className="grid gap-4 sm:grid-cols-2">
