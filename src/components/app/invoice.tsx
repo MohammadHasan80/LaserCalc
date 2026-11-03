@@ -41,6 +41,7 @@ import {
   Phone,
   Instagram,
   Globe,
+  Palette,
 } from "lucide-react";
 import { calculate, type CalcResult, type CalcInput, type RatesConfig } from "@/lib/pricing";
 import {
@@ -61,6 +62,12 @@ import {
   toEnDigits,
   type JalaliYmd,
 } from "@/lib/persian";
+import {
+  DEFAULT_INVOICE_PREFS,
+  loadInvoicePrefs,
+  saveInvoicePrefs,
+  type InvoicePrefs,
+} from "@/lib/invoice-prefs";
 import {
   DEFAULT_PAPER,
   PAPER_MM,
@@ -98,6 +105,8 @@ interface SheetData {
   customerDisplay: string;
   phoneDisplay: string;
   addressDisplay: string;
+  /** سیاه‌وسفید (چاپ اقتصادی) — کل برگ با فیلتر خاکستری رندر می‌شود */
+  mono: boolean;
 }
 
 /**
@@ -108,7 +117,8 @@ interface SheetData {
  *    محتوا از یک صفحه بلندتر شود، به‌صورت تمام‌عرض به صفحه‌های بعدی برش می‌خورد.
  */
 async function buildInvoicePdf(
-  paper: PaperConfig
+  paper: PaperConfig,
+  mono = false
 ): Promise<{ blob: Blob; dataUrl: string }> {
   const [{ toCanvas }, { jsPDF }] = await Promise.all([
     import("html-to-image"),
@@ -121,6 +131,20 @@ async function buildInvoicePdf(
     pixelRatio: 3,
     backgroundColor: "#ffffff",
   });
+  // حالت سیاه‌وسفید: کل کانواس با فیلتر grayscale بازترسیم می‌شود تا
+  // خروجی PDF قطعاً تک‌رنگ باشد — مستقل از رفتار رندر CSS در خروجی گرفتن
+  let full = canvas;
+  if (mono) {
+    const g = document.createElement("canvas");
+    g.width = canvas.width;
+    g.height = canvas.height;
+    const gctx = g.getContext("2d");
+    if (gctx) {
+      gctx.filter = "grayscale(1)";
+      gctx.drawImage(canvas, 0, 0);
+      full = g;
+    }
+  }
   const mm = PAPER_MM[paper.size];
   const pdf = new jsPDF({
     orientation: paper.orientation,
@@ -132,20 +156,20 @@ async function buildInvoicePdf(
   const pageH = paper.orientation === "portrait" ? mm.h : mm.w;
   // ارتفاع هر برشِ صفحه بر حسب پیکسلِ کانواس (هم‌نسبت کاغذ)؛ تلورانس ۴px بوم
   // (= حدود ۱px صفحه در pixelRatio ۳) برای حذف صفحه‌های لاشِ نیم‌پیکسلی
-  const sliceH = Math.round((canvas.width * pageH) / pageW);
+  const sliceH = Math.round((full.width * pageH) / pageW);
   const pages =
-    canvas.height <= sliceH + 4 ? 1 : Math.ceil(canvas.height / sliceH);
+    full.height <= sliceH + 4 ? 1 : Math.ceil(full.height / sliceH);
   for (let i = 0; i < pages; i++) {
     const y = i * sliceH;
-    const h = Math.min(sliceH, canvas.height - y);
+    const h = Math.min(sliceH, full.height - y);
     const pageCanvas = document.createElement("canvas");
-    pageCanvas.width = canvas.width;
+    pageCanvas.width = full.width;
     pageCanvas.height = sliceH;
     const ctx = pageCanvas.getContext("2d");
     if (!ctx) throw new Error("کانتکست کانواس در دسترس نیست");
     ctx.fillStyle = "#ffffff";
     ctx.fillRect(0, 0, pageCanvas.width, pageCanvas.height);
-    ctx.drawImage(canvas, 0, y, canvas.width, h, 0, 0, canvas.width, h);
+    ctx.drawImage(full, 0, y, full.width, h, 0, 0, full.width, h);
     if (i > 0) pdf.addPage();
     // تصویر دقیقاً کل صفحه را می‌پوشاند — بدون حاشیه و بدون مقیاس
     pdf.addImage(
@@ -302,7 +326,10 @@ function InvoiceSheet({
     : SHEET_STYLES;
 
   return (
-    <div className={s.root}>
+    <div
+      className={s.root}
+      style={{ filter: d.mono ? "grayscale(1)" : undefined }}
+    >
       {/* ── هدر سرمه‌ای با تصویر برش لیزر ── */}
       <div className={s.header}>
         <img
@@ -636,7 +663,10 @@ function InvoiceSheetPreview({ d }: { d: SheetData }) {
   };
 
   return (
-    <div className={s.root}>
+    <div
+      className={s.root}
+      style={{ filter: d.mono ? "grayscale(1)" : undefined }}
+    >
       {/* ── هدر سرمه‌ای با تصویر برش لیزر ── */}
       <div className={s.header}>
         <img
@@ -1009,11 +1039,38 @@ export function InvoiceView({
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
   // تاریخ فاکتور — پیش‌فرض همان روز و قابل تغییر با انتخابگر شمسی
   const [jDate, setJDate] = useState<JalaliYmd>(() => jalaliYmd(new Date()));
-  const dateStr = formatJalaliYmd(jDate);
-  const validStr = useMemo(() => {
+  // نمایش فاکتور: رنگی/سیاه‌وسفید + تقویم شمسی/میلادی — ماندگار در localStorage
+  const [prefs, setPrefsState] = useState<InvoicePrefs>(DEFAULT_INVOICE_PREFS);
+  useEffect(() => {
+    setPrefsState(loadInvoicePrefs());
+  }, []);
+  const changePrefs = (patch: Partial<InvoicePrefs>) => {
+    setPrefsState((prev) => {
+      const next = { ...prev, ...patch };
+      saveInvoicePrefs(next);
+      return next;
+    });
+  };
+  // معادل میلادی تاریخ انتخابی (+ مهلت ۷ روزه) — مبنا همان تاریخ شمسی است
+  const gDate = useMemo(() => {
     const g = jalaliToGregorian(jDate.y, jDate.m, jDate.d);
-    return todayJalali(new Date(g.gy, g.gm - 1, g.gd + 7));
+    return new Date(g.gy, g.gm - 1, g.gd);
   }, [jDate]);
+  const gValid = useMemo(
+    () =>
+      new Date(gDate.getFullYear(), gDate.getMonth(), gDate.getDate() + 7),
+    [gDate]
+  );
+  const pad2 = (n: number) => String(n).padStart(2, "0");
+  const formatGregorian = (d: Date) =>
+    `${d.getFullYear()}/${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}`;
+  // تاریخ روی فاکتور طبق تقویم انتخابی؛ میلادی با ارقام لاتین نمایش داده می‌شود
+  const dateStr =
+    prefs.cal === "gregorian"
+      ? formatGregorian(gDate)
+      : formatJalaliYmd(jDate);
+  const validStr =
+    prefs.cal === "gregorian" ? formatGregorian(gValid) : todayJalali(gValid);
   const [exporting, setExporting] = useState(false);
   // تنظیمات کاغذ فاکتور (اندازه + جهت) — با ماندگاری در localStorage
   const [paper, setPaperState] = useState<PaperConfig>(DEFAULT_PAPER);
@@ -1125,7 +1182,7 @@ export function InvoiceView({
     const filename = `${baseName}.pdf`;
     const filenameRtl = `\u200F${baseName}.pdf`;
     try {
-      const { blob, dataUrl } = await buildInvoicePdf(paper);
+      const { blob, dataUrl } = await buildInvoicePdf(paper, prefs.mono);
       const bridge = (
         window as unknown as {
           AndroidBridge?: { savePdf?: (b64: string, name: string) => string };
@@ -1187,6 +1244,7 @@ export function InvoiceView({
     customerDisplay,
     phoneDisplay,
     addressDisplay,
+    mono: prefs.mono,
   };
 
   return (
@@ -1310,9 +1368,63 @@ export function InvoiceView({
             </div>
             <p className="text-[11px] leading-4 text-slate-500">
               پیش‌فرض تاریخ همان روز است؛ روی پیش‌نمایش، نام فایل دانلودی و
-              خروجی چاپ اثر می‌گذارد.
+              خروجی چاپ اثر می‌گذارد. با «میلادی» همین تاریخ به‌صورت میلادی روی
+              فاکتور و در نام فایل می‌نشیند.
             </p>
           </div>
+          {/* ── رنگ و تقویم فاکتور (v1.1.18) ── */}
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label>رنگ فاکتور</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={!prefs.mono ? "default" : "outline"}
+                  onClick={() => changePrefs({ mono: false })}
+                  className="h-9"
+                >
+                  <Palette className="size-4" />
+                  رنگی
+                </Button>
+                <Button
+                  type="button"
+                  variant={prefs.mono ? "default" : "outline"}
+                  onClick={() => changePrefs({ mono: true })}
+                  className="h-9"
+                >
+                  <Printer className="size-4" />
+                  سیاه‌وسفید
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label>تقویم تاریخ روی فاکتور</Label>
+              <div className="grid grid-cols-2 gap-2">
+                <Button
+                  type="button"
+                  variant={prefs.cal === "jalali" ? "default" : "outline"}
+                  onClick={() => changePrefs({ cal: "jalali" })}
+                  className="h-9"
+                >
+                  <CalendarDays className="size-4" />
+                  شمسی
+                </Button>
+                <Button
+                  type="button"
+                  variant={prefs.cal === "gregorian" ? "default" : "outline"}
+                  onClick={() => changePrefs({ cal: "gregorian" })}
+                  className="h-9"
+                >
+                  <Globe className="size-4" />
+                  میلادی
+                </Button>
+              </div>
+            </div>
+          </div>
+          <p className="text-[11px] leading-4 text-slate-500">
+            حالت سیاه‌وسفید برای چاپ اقتصادی مناسب است و تقویم میلادی برای
+            فاکتور مشتری خارجی؛ انتخاب‌ها برای دفعات بعد ذخیره می‌شود.
+          </p>
           {/* ── اندازه و جهت کاغذ فاکتور ── */}
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">

@@ -99,6 +99,10 @@ public class MainActivity extends Activity {
         settings.setDomStorageEnabled(true);
         settings.setDatabaseEnabled(true);
         settings.setAllowFileAccess(true);
+        // زوم (پینچ دو انگشت و دابل‌تپ) غیرفعال — چیدمان اپ ثابت می‌ماند
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
         // فقط نشانی‌های داخلی (وب‌سرور محلی) در خود WebView باز می‌شوند؛
         // هر نشانی بیرونی (مثل لینک تلگرام) با اپ مرتبط یا مرورگر خارجی باز می‌شود
         webView.setWebViewClient(new WebViewClient() {

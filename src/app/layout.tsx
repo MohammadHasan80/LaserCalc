@@ -13,6 +13,10 @@ export const metadata: Metadata = {
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
+  // زوم (پینچ/دابل‌تپ) غیرفعال — چیدمان اپ ثابت می‌ماند و اتصالات
+  // تصادفی دو انگشت در گوشی، صفحه را بزرگ/کوچک نمی‌کند
+  maximumScale: 1,
+  userScalable: false,
   themeColor: "#1c1917",
 };
 
