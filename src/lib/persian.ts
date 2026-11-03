@@ -272,6 +272,31 @@ export function jalaliToGregorian(
   return d2g(j2d(jy, jm, jd));
 }
 
+/** تبدیل تاریخ میلادی به شمسی (وارونهٔ jalaliToGregorian) */
+export function gregorianToJalali(
+  gy: number,
+  gm: number,
+  gd: number
+): JalaliYmd {
+  const jdn = g2d(gy, gm, gd);
+  const gy0 = d2g(jdn).gy;
+  let jy = gy0 - 621;
+  const r = jalCal(jy);
+  const jdn1f = g2d(gy0, 3, r.march);
+  let k = jdn - jdn1f;
+  if (k >= 0) {
+    if (k <= 185) {
+      return { y: jy, m: 1 + jDiv(k, 31), d: jMod(k, 31) + 1 };
+    }
+    k -= 186;
+  } else {
+    jy -= 1;
+    k += 179;
+    if (r.leap === 1) k += 1;
+  }
+  return { y: jy, m: 7 + jDiv(k, 30), d: jMod(k, 30) + 1 };
+}
+
 /** سال شمسی کبیسه است؟ (اسفند ۳۰ روز دارد) */
 export function isJalaliLeap(jy: number): boolean {
   return jalCal(jy).leap === 0;

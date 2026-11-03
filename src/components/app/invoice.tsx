@@ -53,6 +53,7 @@ import {
   faMoney,
   faNum,
   formatJalaliYmd,
+  gregorianToJalali,
   jalaliMonthLength,
   jalaliToGregorian,
   jalaliYmd,
@@ -1039,7 +1040,8 @@ export function InvoiceView({
   const result = useMemo(() => calculate({ ...input, rates }), [input, rates]);
   // تاریخ فاکتور — پیش‌فرض همان روز و قابل تغییر با انتخابگر شمسی
   const [jDate, setJDate] = useState<JalaliYmd>(() => jalaliYmd(new Date()));
-  // رنگی/سیاه‌وسفید + تقویم بخش تنظیم تاریخ — ماندگار در localStorage (فاکتور همیشه شمسی)
+  // رنگی/سیاه‌وسفید + تقویمِ ورودِ تاریخ (شمسی/میلادی) — ماندگار در localStorage
+  // (فاکتور همیشه شمسی صادر می‌شود؛ تقویم فقط انتخابگر بخش تنظیم را عوض می‌کند)
   const [prefs, setPrefsState] = useState<InvoicePrefs>(DEFAULT_INVOICE_PREFS);
   useEffect(() => {
     setPrefsState(loadInvoicePrefs());
@@ -1108,6 +1110,22 @@ export function InvoiceView({
     { length: jalaliMonthLength(jDate.y, jDate.m) },
     (_, i) => i + 1
   );
+  // انتخابگر میلادی — همان تاریخِ واحدِ فاکتور، فقط با تقویم میلادی
+  const todayGy = new Date().getFullYear();
+  const gregYearOptions: number[] = [];
+  for (let y = todayGy - 6; y <= todayGy + 1; y += 1) gregYearOptions.push(y);
+  const gregY = gDate.getFullYear();
+  const gregM = gDate.getMonth() + 1;
+  const gregD = gDate.getDate();
+  const gregDaysInMonth = new Date(gregY, gregM, 0).getDate();
+  const gregDayOptions = Array.from({ length: gregDaysInMonth }, (_, i) => i + 1);
+  const patchGDate = (p: { gy?: number; gm?: number; gd?: number }) => {
+    const gy = p.gy ?? gregY;
+    const gm = p.gm ?? gregM;
+    const gd = Math.min(p.gd ?? gregD, new Date(gy, gm, 0).getDate());
+    const j = gregorianToJalali(gy, gm, gd);
+    setJDate({ y: j.y, m: j.m, d: j.d });
+  };
   // پل اندروید موجود است؟ (در WebView اپ APK چاپ سیستم کار نمی‌کند)
   const [hasBridge, setHasBridge] = useState(false);
   const [mounted, setMounted] = useState(false);
@@ -1308,65 +1326,149 @@ export function InvoiceView({
               />
             </div>
           </div>
-          {/* ── تاریخ فاکتور — پیش‌فرض همان روز، قابل تغییر ── */}
+          {/* ── تاریخ فاکتور — پیش‌فرض همان روز؛ سوئیچ شمسی/میلادی فقط
+              انتخابگرِ ورود همین بخش را عوض می‌کند (تاریخ حفظ می‌شود) ── */}
           <div className="space-y-2">
-            <Label>تاریخ فاکتور (شمسی)</Label>
-            <div className="flex flex-wrap items-center gap-2">
-              <Select
-                value={String(jDate.y)}
-                onValueChange={(v) => patchJDate({ y: Number(v) })}
-              >
-                <SelectTrigger className="h-9 w-[7.5rem]">
-                  <SelectValue placeholder="سال" />
-                </SelectTrigger>
-                <SelectContent>
-                  {yearOptions.map((y) => (
-                    <SelectItem key={y} value={String(y)}>
-                      {faDigits(y)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={String(jDate.m)}
-                onValueChange={(v) => patchJDate({ m: Number(v) })}
-              >
-                <SelectTrigger className="h-9 w-32">
-                  <SelectValue placeholder="ماه" />
-                </SelectTrigger>
-                <SelectContent>
-                  {PERSIAN_MONTHS.map((name, i) => (
-                    <SelectItem key={name} value={String(i + 1)}>
-                      {name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={String(jDate.d)}
-                onValueChange={(v) => patchJDate({ d: Number(v) })}
-              >
-                <SelectTrigger className="h-9 w-24">
-                  <SelectValue placeholder="روز" />
-                </SelectTrigger>
-                <SelectContent>
-                  {dayOptions.map((d) => (
-                    <SelectItem key={d} value={String(d)}>
-                      {faDigits(d)}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="outline"
-                className="h-9"
-                onClick={resetJDateToToday}
-                disabled={isTodayJ}
-              >
-                <CalendarDays className="size-4" /> امروز
-              </Button>
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <Label>
+                تاریخ فاکتور ({prefs.cal === "gregorian" ? "میلادی" : "شمسی"})
+              </Label>
+              <div className="flex gap-1">
+                <Button
+                  type="button"
+                  variant={prefs.cal === "jalali" ? "default" : "outline"}
+                  onClick={() => changePrefs({ cal: "jalali" })}
+                  className="h-8 px-3 text-xs"
+                >
+                  <CalendarDays className="size-3.5" />
+                  شمسی
+                </Button>
+                <Button
+                  type="button"
+                  variant={prefs.cal === "gregorian" ? "default" : "outline"}
+                  onClick={() => changePrefs({ cal: "gregorian" })}
+                  className="h-8 px-3 text-xs"
+                >
+                  <Globe className="size-3.5" />
+                  میلادی
+                </Button>
+              </div>
             </div>
+            {prefs.cal === "jalali" ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={String(jDate.y)}
+                  onValueChange={(v) => patchJDate({ y: Number(v) })}
+                >
+                  <SelectTrigger className="h-9 w-[7.5rem]">
+                    <SelectValue placeholder="سال" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {yearOptions.map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        {faDigits(y)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String(jDate.m)}
+                  onValueChange={(v) => patchJDate({ m: Number(v) })}
+                >
+                  <SelectTrigger className="h-9 w-32">
+                    <SelectValue placeholder="ماه" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {PERSIAN_MONTHS.map((name, i) => (
+                      <SelectItem key={name} value={String(i + 1)}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String(jDate.d)}
+                  onValueChange={(v) => patchJDate({ d: Number(v) })}
+                >
+                  <SelectTrigger className="h-9 w-24">
+                    <SelectValue placeholder="روز" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {dayOptions.map((d) => (
+                      <SelectItem key={d} value={String(d)}>
+                        {faDigits(d)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9"
+                  onClick={resetJDateToToday}
+                  disabled={isTodayJ}
+                >
+                  <CalendarDays className="size-4" /> امروز
+                </Button>
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-center gap-2">
+                <Select
+                  value={String(gregY)}
+                  onValueChange={(v) => patchGDate({ gy: Number(v) })}
+                >
+                  <SelectTrigger className="h-9 w-[7.5rem]">
+                    <SelectValue placeholder="سال" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gregYearOptions.map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        <span dir="ltr">{y}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String(gregM)}
+                  onValueChange={(v) => patchGDate({ gm: Number(v) })}
+                >
+                  <SelectTrigger className="h-9 w-24">
+                    <SelectValue placeholder="ماه" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 12 }, (_, i) => i + 1).map((m) => (
+                      <SelectItem key={m} value={String(m)}>
+                        <span dir="ltr">{String(m).padStart(2, "0")}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={String(gregD)}
+                  onValueChange={(v) => patchGDate({ gd: Number(v) })}
+                >
+                  <SelectTrigger className="h-9 w-24">
+                    <SelectValue placeholder="روز" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gregDayOptions.map((d) => (
+                      <SelectItem key={d} value={String(d)}>
+                        <span dir="ltr">{String(d).padStart(2, "0")}</span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9"
+                  onClick={resetJDateToToday}
+                  disabled={isTodayJ}
+                >
+                  <CalendarDays className="size-4" /> امروز
+                </Button>
+              </div>
+            )}
             <p className="text-xs font-medium text-slate-700">
               تاریخ تنظیم‌شده:{" "}
               <span dir="ltr" className="tabular-nums">
@@ -1374,64 +1476,39 @@ export function InvoiceView({
               </span>
             </p>
             <p className="text-[11px] leading-4 text-slate-500">
-              پیش‌فرض تاریخ همان روز است. روی پیش‌نمایش فاکتور، خروجی PDF، مهلت
-              اعتبار و نام فایل همیشه تاریخ شمسی می‌نشیند؛ سوئیچ تقویم فقط
-              نحوهٔ نمایش همین تاریخ در بخش تنظیم را عوض می‌کند.
+              پیش‌فرض تاریخ همان روز است. سوئیچ شمسی/میلادی فقط انتخابگرِ ورود
+              همین بخش را عوض می‌کند و تاریخِ انتخاب‌شده هنگام تغییر تقویم حفظ
+              می‌شود؛ روی پیش‌نمایش فاکتور، خروجی PDF، مهلت اعتبار و نام فایل
+              همیشه تاریخ شمسی می‌نشیند.
             </p>
           </div>
-          {/* ── رنگ و تقویم فاکتور (v1.1.18) ── */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="space-y-2">
-              <Label>رنگ فاکتور</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={!prefs.mono ? "default" : "outline"}
-                  onClick={() => changePrefs({ mono: false })}
-                  className="h-9"
-                >
-                  <Palette className="size-4" />
-                  رنگی
-                </Button>
-                <Button
-                  type="button"
-                  variant={prefs.mono ? "default" : "outline"}
-                  onClick={() => changePrefs({ mono: true })}
-                  className="h-9"
-                >
-                  <Printer className="size-4" />
-                  سیاه‌وسفید
-                </Button>
-              </div>
-            </div>
-            <div className="space-y-2">
-              <Label>تقویم تنظیم تاریخ</Label>
-              <div className="grid grid-cols-2 gap-2">
-                <Button
-                  type="button"
-                  variant={prefs.cal === "jalali" ? "default" : "outline"}
-                  onClick={() => changePrefs({ cal: "jalali" })}
-                  className="h-9"
-                >
-                  <CalendarDays className="size-4" />
-                  شمسی
-                </Button>
-                <Button
-                  type="button"
-                  variant={prefs.cal === "gregorian" ? "default" : "outline"}
-                  onClick={() => changePrefs({ cal: "gregorian" })}
-                  className="h-9"
-                >
-                  <Globe className="size-4" />
-                  میلادی
-                </Button>
-              </div>
+          {/* ── رنگ فاکتور (v1.1.18) — سوئیچ تقویم به بخش تاریخ منتقل شد ── */}
+          <div className="space-y-2">
+            <Label>رنگ فاکتور</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={!prefs.mono ? "default" : "outline"}
+                onClick={() => changePrefs({ mono: false })}
+                className="h-9"
+              >
+                <Palette className="size-4" />
+                رنگی
+              </Button>
+              <Button
+                type="button"
+                variant={prefs.mono ? "default" : "outline"}
+                onClick={() => changePrefs({ mono: true })}
+                className="h-9"
+              >
+                <Printer className="size-4" />
+                سیاه‌وسفید
+              </Button>
             </div>
           </div>
           <p className="text-[11px] leading-4 text-slate-500">
-            حالت سیاه‌وسفید برای چاپ اقتصادی مناسب است. تقویم فقط نمایش تاریخ
-            در بخش تنظیم را عوض می‌کند — فاکتور همیشه شمسی صادر می‌شود؛
-            انتخاب‌ها برای دفعات بعد ذخیره می‌شود.
+            حالت سیاه‌وسفید برای چاپ اقتصادی مناسب است؛ انتخاب‌ها برای دفعات
+            بعد ذخیره می‌شود.
           </p>
           {/* ── اندازه و جهت کاغذ فاکتور ── */}
           <div className="grid gap-4 sm:grid-cols-2">
