@@ -1063,17 +1063,12 @@ export function InvoiceView({
       new Date(gDate.getFullYear(), gDate.getMonth(), gDate.getDate() + 7),
     [gDate]
   );
-  const pad2 = (n: number) => String(n).padStart(2, "0");
-  const formatGregorian = (d: Date) =>
-    `${d.getFullYear()}/${pad2(d.getMonth() + 1)}/${pad2(d.getDate())}`;
   // فاکتور (پیش‌نمایش، PDF، مهلت اعتبار و نام فایل) همیشه با تاریخ شمسی
-  // صادر می‌شود (v1.1.19) — سوئیچ تقویم فقط نمایش تاریخ در بخش تنظیم را
-  // عوض می‌کند تا برگ فاکتور ثابت و قابل‌اتکا بماند.
+  // صادر می‌شود (v1.1.19) — سوئیچ تقویم فقط انتخابگرِ ورود تاریخ در بخش
+  // تنظیم را عوض می‌کند تا برگ فاکتور ثابت و قابل‌اتکا بماند (v1.1.21:
+  // متن راهنما و نمایش تاریخ زیر انتخابگر حذف شد — فقط خود انتخابگر عوض می‌شود).
   const dateStr = formatJalaliYmd(jDate);
   const validStr = todayJalali(gValid);
-  // نمایش تاریخ تنظیم‌شده در بخش تنظیم طبق تقویم انتخابی (میلادی با ارقام لاتین)
-  const settingDateStr =
-    prefs.cal === "gregorian" ? formatGregorian(gDate) : formatJalaliYmd(jDate);
   const [exporting, setExporting] = useState(false);
   // تنظیمات کاغذ فاکتور (اندازه + جهت) — با ماندگاری در localStorage
   const [paper, setPaperState] = useState<PaperConfig>(DEFAULT_PAPER);
@@ -1469,18 +1464,6 @@ export function InvoiceView({
                 </Button>
               </div>
             )}
-            <p className="text-xs font-medium text-slate-700">
-              تاریخ تنظیم‌شده:{" "}
-              <span dir="ltr" className="tabular-nums">
-                {settingDateStr}
-              </span>
-            </p>
-            <p className="text-[11px] leading-4 text-slate-500">
-              پیش‌فرض تاریخ همان روز است. سوئیچ شمسی/میلادی فقط انتخابگرِ ورود
-              همین بخش را عوض می‌کند و تاریخِ انتخاب‌شده هنگام تغییر تقویم حفظ
-              می‌شود؛ روی پیش‌نمایش فاکتور، خروجی PDF، مهلت اعتبار و نام فایل
-              همیشه تاریخ شمسی می‌نشیند.
-            </p>
           </div>
           {/* ── رنگ فاکتور (v1.1.18) — سوئیچ تقویم به بخش تاریخ منتقل شد ── */}
           <div className="space-y-2">
