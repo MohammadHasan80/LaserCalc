@@ -81,6 +81,7 @@ echo "═══ [4/8] aapt2 compile + link ═══"
   --manifest android-src/AndroidManifest.xml \
   --version-code "$VERSION_CODE" \
   --version-name "$VERSION_NAME" \
+  --replace-version \
   --java "$BUILD/gen" \
   -A out \
   -A android-src/assets \
