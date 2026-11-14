@@ -1,0 +1,39 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <!-- بیلد روی لینوکس برای ویندوز -->
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <AssemblyName>LaserCalc</AssemblyName>
+    <RootNamespace>LaserCalc</RootNamespace>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Version>1.1.22</Version>
+    <AssemblyVersion>1.1.22.0</AssemblyVersion>
+    <FileVersion>1.1.22.0</FileVersion>
+    <Product>LaserCalc</Product>
+    <AssemblyTitle>LaserCalc 1.1.22</AssemblyTitle>
+    <ApplicationIcon>app.ico</ApplicationIcon>
+    <!-- تک‌فایل پرتابل — کتابخانه‌های native هم داخل باندل و در ریشهٔ استخراج -->
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <IncludeAllContentForSelfExtract>true</IncludeAllContentForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4314.35" />
+    <!-- پشتیبانِ ضدخطا: WebView2Loader.dll به‌صورت منبع تعبیه‌شده؛ هنگام اجرا به
+         %LOCALAPPDATA%\LaserCalc\bin استخراج و صریحاً LoadLibrary می‌شود تا هرگز
+         به جست‌وجوی باندل تک‌فایل وابسته نباشیم (باگ v1.1.21: DLL در زیرپوشهٔ libs
+         باندل شده بود و .NET فقط ریشهٔ استخراج را می‌بیند). -->
+    <EmbeddedResource Include="WebView2Loader.dll" />
+    <!-- سایت به‌صورت استاتیک (خروجی EXPORT_MODE=1 next build) — با build-exe.sh ساخته می‌شود -->
+    <EmbeddedResource Include="LaserCalc.www.zip" />
+  </ItemGroup>
+
+</Project>
