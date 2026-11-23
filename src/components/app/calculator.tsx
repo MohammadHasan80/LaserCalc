@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -72,24 +72,48 @@ export function Calculator({
   const set = <K extends keyof CalcInput>(key: K, value: CalcInput[K]) =>
     onChange({ ...input, [key]: value });
 
-  const numField = (
-    key: keyof CalcInput,
-    placeholder: string,
-    step = "1",
-    min = "0"
-  ) => (
+  // متن خام فیلدهای عددی — برای حفظ دقیق ورودی کاربر حین تایپ (v1.1.23):
+  // با type="number" و تبدیل به Number در هر کلید، نقطهٔ اعشار گم می‌شد
+  // (مثلاً «0.05» به «5» تبدیل می‌شد) و گام 0.1 شبیه حداقل مجاز رفتار می‌کرد.
+  // حالا هیچ گرد یا محدودیتی اعمال نمی‌شود؛ هر عدد مثبت با هر دقتی پذیرفته می‌شود.
+  const [rawNums, setRawNums] = useState<Partial<Record<string, string>>>({});
+
+  /** متن نمایشی فیلد عددی: متن خام کاربر تا وقتی با مقدار state هم‌خوان است؛
+   *  وگرنه مقدار واقعی state (مثلاً پس از دکمه‌های ضخامت یا پاک کردن). */
+  const shownNum = (key: keyof CalcInput): string => {
+    const mirror = rawNums[key];
+    const stateVal = input[key] === "" ? null : (input[key] as number);
+    if (mirror === undefined) return stateVal === null ? "" : String(stateVal);
+    const parsed = mirror === "" ? null : Number(mirror);
+    const inSync =
+      stateVal === null
+        ? parsed === null || !Number.isFinite(parsed)
+        : parsed !== null && Number.isFinite(parsed) && parsed === stateVal;
+    return inSync ? mirror : stateVal === null ? "" : String(stateVal);
+  };
+
+  const numField = (key: keyof CalcInput, placeholder: string) => (
     <Input
-      type="number"
+      type="text"
       inputMode="decimal"
       dir="ltr"
       className="no-spinner text-right"
       placeholder={placeholder}
-      step={step}
-      min={min}
-      value={input[key] === "" ? "" : String(input[key])}
+      value={shownNum(key)}
       onChange={(e) => {
-        const raw = toEnDigits(e.target.value).replace(/[^\d.]/g, "");
-        set(key, raw === "" ? ("" as never) : (Number(raw) as never));
+        // ارقام فارسی/عربی به لاتین؛ جداکنندهٔ اعشار فارسی (٫) به نقطه؛
+        // جداکنندهٔ هزارگان حذف؛ فقط رقم و نقطه باقی می‌ماند — متن دقیقاً
+        // همان چیزی که کاربر تایپ کرده نگه داشته می‌شود.
+        const raw = toEnDigits(e.target.value)
+          .replace(/\u066B/g, ".")
+          .replace(/,/g, "")
+          .replace(/[^\d.]/g, "");
+        setRawNums((m) => ({ ...m, [key]: raw }));
+        const n = raw === "" ? null : Number(raw);
+        set(
+          key,
+          (n === null || !Number.isFinite(n) ? "" : n) as never
+        );
       }}
     />
   );
@@ -245,7 +269,7 @@ export function Calculator({
 
             <div className="space-y-2">
               <Label htmlFor="thickness">ضخامت ورق (mm)</Label>
-              {numField("thickness", "مثلاً 1.5", "0.1")}
+              {numField("thickness", "مثلاً 1.5")}
               {input.sheetType && thicknessOptions.length > 0 && (
                 <div className="flex flex-wrap gap-1.5 pt-1">
                   {thicknessOptions.map((t) => (
@@ -278,7 +302,7 @@ export function Calculator({
               <Label htmlFor="cutLen" className="flex items-center gap-1">
                 <Ruler className="size-3" /> متراژ برش برای یک قطعه (m)
               </Label>
-              {numField("cutLengthPerPiece", "مثلاً 2.5", "0.1")}
+              {numField("cutLengthPerPiece", "مثلاً 2.5 یا 0.05")}
             </div>
 
             <div className="space-y-2">
@@ -293,12 +317,12 @@ export function Calculator({
 
             <div className="space-y-2">
               <Label htmlFor="prsRate">نرخ prs (ریال)</Label>
-              {numField("prsRate", "5500", "100")}
+              {numField("prsRate", "5500")}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="design">هزینه طراحی (ریال)</Label>
-              {numField("designCost", "0", "10000")}
+              {numField("designCost", "0")}
             </div>
           </CardContent>
         </Card>
@@ -338,8 +362,7 @@ export function Calculator({
                     "sheetPriceManual",
                     defaultSheetRate !== null
                       ? `نرخ جدول: ${defaultSheetRate}`
-                      : "مثلاً 750000",
-                    "10000"
+                      : "مثلاً 750000"
                   )}
                   <p className="text-xs text-muted-foreground">
                     {manualRateActive

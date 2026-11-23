@@ -1,5 +1,7 @@
 // ─────────────────────────────────────────────────────────────────────────────
 // LaserCalc — پوستهٔ ویندوز (WinForms + WebView2)
+// v1.1.23 — فیلد متراژ برش اکنون هر عدد مثبت اعشاری را با دقت کامل می‌پذیرد
+//   (تغییر در وب‌اپ؛ این پوسته فقط نسخهٔ جدید سایت را embed می‌کند).
 // v1.1.22 — رفع «.Dll was not found.»:
 //   WebView2Loader.dll به‌صورت منبع تعبیه‌شده، هنگام اجرا به %LOCALAPPDATA%\LaserCalc\bin
 //   استخراج و صریحاً بارگذاری می‌شود (NativeLibrary.Load) — به‌جای تکیه بر جست‌وجوی
@@ -18,7 +20,7 @@ namespace LaserCalc;
 
 internal static class Program
 {
-    public const string Version = "1.1.22";
+    public const string Version = "1.1.23";
     private const ushort Port = 47231;
     private static readonly string AppDataDir = Path.Combine(
         Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "LaserCalc");

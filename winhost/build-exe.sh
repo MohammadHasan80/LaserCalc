@@ -3,11 +3,11 @@
 # LaserCalc — بیلد EXE ویندوز (winhost)
 # 1) بیلد استاتیک سایت (EXPORT_MODE=1) اگر out/ نبود  2) زیپ → LaserCalc.www.zip
 # 3) WebView2Loader.dll از NuGet اگر نبود  4) dotnet publish تک‌فایل
-# خروجی: download/LaserCalc-v1.1.22-Windows-x64.exe
+# خروجی: download/LaserCalc-v1.1.23-Windows-x64.exe
 # ─────────────────────────────────────────────────────────────────────────────
 set -euo pipefail
 
-VERSION="1.1.22"
+VERSION="1.1.23"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"   # ریشهٔ ریپو
 WH="$ROOT/winhost"
 OUT_DIR="${OUT_DIR:-/home/z/my-project/download}"
